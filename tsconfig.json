@@ -1,0 +1,47 @@
+{
+  "compilerOptions": {
+    // Environment Settings
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+
+    // File Layout
+    "outDir": "./dist",
+    "rootDir": "./src",
+    
+    "paths": {
+      "@/*": ["./src/*"],
+      "@config/*": ["./src/config/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@detectors/*": ["./src/detectors/*"],
+      "@analitics/*": ["./src/analitics/*"],
+      "@core/*": ["./src/core/*"],
+      "@workers/*": ["./src/workers/*"],
+      "@api/*": ["./src/api/*"],
+    },
+
+    // For nodejs:
+    "lib": ["DOM", "DOM.Iterable", "WebWorker", "ES2022"],
+
+    // Other Outputs
+    "declaration": true,
+    "declarationMap": true,
+
+    // strict
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    
+    //optimisation
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "jsx": "react-jsx"
+  },
+  "include": ["src/**/*", "src/types.ts", "src/worker.d.ts"],
+  "exclude": ["node_modules", "dist", "demo"]
+}
