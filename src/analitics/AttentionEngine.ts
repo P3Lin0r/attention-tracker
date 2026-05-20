@@ -1,11 +1,10 @@
-import { clamp, rad2degScalar, std } from "@/utils/helpers";
-import type { CalibrationManager } from "./CalibrationManager";
+import { clamp, rad2degScalar } from "@/utils/helpers";
 import type {
-    AttentionResult,
     AttentionDetails,
     AttentionStatus,
     Signals,
-    TrackerSnapshot
+    TrackerSnapshot,
+    CalibrationState
 } from "@/types";
 import { HistoryBuffer } from "@/core/history/History";
 
@@ -29,9 +28,9 @@ export class AttentionEngine {
 
     analyze(
         snapshot: TrackerSnapshot,
-        calibration: CalibrationManager,
+        calibrationState: CalibrationState,
         signals: Signals
-    ): AttentionResult {
+    ): { status: AttentionStatus, score: number, details: AttentionDetails } {
 
         const details: AttentionDetails = {
             penalties: { gaze: 0, perclos: 0, yawn: 0, emotionModifier: 1 },
@@ -39,19 +38,17 @@ export class AttentionEngine {
             direction: {
                 headAngles: snapshot.headAngles,
                 gazeVector: snapshot.gaze,
-            },
-            calibration: { isCalibrated: calibration.isCalibrated },
-            signals: signals
+            }
         }
 
         // HARD OVERRIDES
-        if (signals.blinkStatus == "MICROSLEEP"){
+        if (signals.blink.status == "MICROSLEEP"){
             this.score = 0
             this.applyStatusImmediately("MICROSLEEP")
             return this.buildResult(details)
         }
 
-        if (signals.blinkStatus == "DROWSY"){
+        if (signals.blink.status == "DROWSY"){
             if (this.score > 0.4){
                 this.score = Math.max(0.4, this.score * 0.7)
             } else {
@@ -62,13 +59,13 @@ export class AttentionEngine {
         }
 
         // SOFT SCORE
-        if (snapshot.gaze && calibration.isCalibrated){
+        if (snapshot.gaze && calibrationState.isCalibrated){
             const [gx, gy, gz] = snapshot.gaze
             const yaw = rad2degScalar(Math.atan2(gx, Math.abs(gz) + 1e-6))
             const pitch = rad2degScalar(Math.asin(clamp(-gy, -1, 1)))
 
-            const yawDiff = yaw - calibration.getState().yaw
-            const pitchDiff = pitch - calibration.getState().pitch
+            const yawDiff = yaw - calibrationState.yaw
+            const pitchDiff = pitch - calibrationState.pitch
             
             this.yawHistory.push(yawDiff)
             this.pitchHistory.push(pitchDiff)
@@ -78,8 +75,8 @@ export class AttentionEngine {
             details.penalties.gaze = Math.min(1, yawPenalty + pitchPenalty)
 
             if (this.yawHistory.isFull && this.yawHistory.length >= 15){
-                const yawStd = std(this.yawHistory.values())
-                const pitchStd = std(this.pitchHistory.values())
+                const yawStd = this.yawHistory.std()
+                const pitchStd = this.pitchHistory.std()
                 
                 if ((yawStd + pitchStd) > 18){
                     details.isADHD = true
@@ -87,8 +84,8 @@ export class AttentionEngine {
             }
         }
 
-        details.penalties.yawn = signals.yawnStatus == "YAWNING" ? 0.4 : 0
-        details.penalties.perclos = signals.perclos
+        details.penalties.yawn = signals.yawn.status == "YAWNING" ? 0.4 : 0
+        details.penalties.perclos = signals.blink.perclos
 
         const emotion = signals.emotion
         if (emotion == "FOCUSED"){
@@ -145,7 +142,7 @@ export class AttentionEngine {
         }
     }
 
-    private buildResult(details: AttentionDetails): AttentionResult{
+    private buildResult(details: AttentionDetails) {
         return {
             status: this.status,
             score: this.score,
