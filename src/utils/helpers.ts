@@ -12,7 +12,7 @@ export function mean(arr: readonly number[] | Float32Array): number {
     return sum / len
 }
 
-function quickselect(arr: number[] | Float32Array, k: number, left: number, right: number): number {
+export function quickselect(arr: number[] | Float32Array, k: number, left: number, right: number): number {
     while (left < right) {
         let pivotIndex = left + Math.floor(Math.random() * (right - left + 1))
         const pivotValue = arr[pivotIndex]!
