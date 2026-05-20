@@ -1,7 +1,12 @@
-import { AttentionMonitor, type AttentionResult } from "../src/index"; // В реальності буде import { AttentionMonitor } from 'твоя-назва-npm'
+import { AttentionMonitor, type AttentionResult } from "../src/index";
+import { Visualizer } from "./visualizers/Visualizer"
 
 const video = document.getElementById("webcam") as HTMLVideoElement;
+const canvas = document.getElementById("overlay") as HTMLCanvasElement;
 const stats = document.getElementById("stats") as HTMLDivElement;
+
+const ctx = canvas.getContext("2d")!
+const visualizer = new Visualizer()
 
 async function setupCamera() {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -12,33 +17,39 @@ async function setupCamera() {
         }
     })
 
-    video.srcObject = stream
-    await video.play()
+    video.srcObject = stream;
+    
+    return new Promise<void>((resolve) => {
+        video.onloadedmetadata = async () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            await video.play();
+            resolve();
+        };
+    });
 }
 
 async function main() {
     await setupCamera();
 
-    // 1. Ініціалізація з конфігом!
     const monitor = await AttentionMonitor.create({
         worker: false,
         backend: "CPU",
         gazeStrategy: "openvino"
     });
 
-    // 2. Підписка на результати
-    monitor.on("attention", (result: AttentionResult) => {
+    monitor.on("attention", (
+        result: AttentionResult,
+    ) => {
+        visualizer.draw(ctx, video, result)
+
         stats.innerHTML = `
             Status: <b>${result.status}</b> <br>
             Score: ${result.score.toFixed(2)}
         `;
     });
 
-    // 3. Запуск
     monitor.start(video);
-    
-    // Коли треба зупинити:
-    // monitor.stop();
 }
 
 main();
