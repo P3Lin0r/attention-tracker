@@ -17,7 +17,7 @@ import {
 import { OpenVINOGazeDetector } from "@/detectors/gaze/OpenVinoGaze"
 import { PerformanceMonitor } from "./performance/PerformanceMonitor"
 import { rad2degScalar } from "@/utils/helpers"
-import type { GazeStrategy, TrackerSnapshot, Vector3D } from "@/types"
+import type { GazeStrategy, Signals, TrackerSnapshot, Vector3D } from "@/types"
 
 type deviceOptions = "CPU" | "GPU"
 
@@ -186,41 +186,43 @@ export class FaceTracker{
 
         return head_rad_list.map((v)=> rad2degScalar(v)) as Vector3D
     }
-    
-    getBlinkStatus() {
-        return this.blinkDetector.status
-    }
-    getBlinkCount() {
-        return this.blinkDetector.blinkCount
-    }
-    getPerclos(): number{
-        return this.blinkDetector.perclosScore
-    }
-    getYawnStatus() {
-        return this.yawnDetector.status
-    }
-    getYawnCount() {
-        return this.yawnDetector.yawnCount
-    }
-    getEmotion() {
-        return this.emotionsDetector.current_emotion
-    }
-    getCurrentGaze() {
-        return this.currentGaze
-    }
-
-    getPerformanceStats() {
-        return {
-            latency: this.perfMonitor.getLatency(),
-            isDowngraded: this.perfMonitor.shouldDowngrade()
-        }
-    }
 
     getSnapshot(): TrackerSnapshot {
         return {
             landmarks: this.latestResult?.faceLandmarks[0],
-            gaze: this.currentGaze?.arraySync(),
-            headAngles: this.getHeadAngles()
+            gaze: this.currentGaze,
+            headAngles: this.currentHeadAngles
+        }
+    }
+
+    getSignals(): Signals {
+        const isDowngraded = this.perfMonitor.shouldDowngrade()
+        const activeModel = (this.gazeStrategy === "auto")
+            ? (isDowngraded ? "MATH" : "OPENVINO")
+            : (this.gazeStrategy === "math" ? "MATH" : "OPENVINO")
+        
+        return {
+            emotion: this.emotionsDetector.current_emotion,
+            blink: {
+                status: this.blinkDetector.status,
+                count: this.blinkDetector.blinkCount,
+                perclos: this.blinkDetector.perclosScore,
+                threshold: this.blinkDetector.threshold
+            },
+            yawn: {
+                status: this.yawnDetector.status,
+                count: this.yawnDetector.yawnCount,
+                threshold: this.yawnDetector.threshold
+            },
+            raw: {
+                ear: this.currentEAR,
+                mar: this.currentMAR,
+            },
+            performance: {
+                latency: this.perfMonitor.getLatency(),
+                isDowngraded,
+                activeModel
+            }
         }
     }
 }

@@ -22,18 +22,13 @@ self.onmessage = async (e: MessageEvent) => {
         await tracker.process(imageBitmap)
 
         const snapshot = tracker.getSnapshot()
-        const signals = {
-            blinkStatus: tracker.getBlinkStatus(),
-            perclos: tracker.getPerclos(),
-            yawnStatus: tracker.getYawnStatus(),
-            emotion: tracker.getEmotion()
-        }
+        const signals = tracker.getSignals()
         
         self.postMessage({
             type: "RESULT",
             payload: { snapshot, signals }
         })
 
-        // imageBitmap.close()
+        imageBitmap.close()
     }
 }

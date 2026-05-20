@@ -46,9 +46,9 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
 
     private async init(): Promise<void> {
         if (this.config.worker) {
-            this.initWorker()
+            await this.initWorker()
         } else {
-            this.initLocal()
+            await this.initLocal()
         }
     }
 
@@ -98,9 +98,20 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
 
     private handleResult(snapshot: TrackerSnapshot, signals: Signals) {
         this.calibration.update(snapshot)
-        const result = this.engine.analyze(snapshot, this.calibration, signals)
+        const calibState = this.calibration.getState()
 
-        this.emit("attention", result)
+        const engineData = this.engine.analyze(snapshot, calibState, signals)
+
+        const finalResult: AttentionResult = {
+            status: engineData.status,
+            score: engineData.score,
+            details: engineData.details,
+            signals: signals,
+            snapshot: snapshot,
+            calibration: calibState
+        }
+
+        this.emit("attention", finalResult)
 
         if (this.isRunning){
             this.animationFrameId = requestAnimationFrame(()=> this.processNextFrame())
@@ -138,12 +149,7 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
                 await this.localTracker.process(imageBitmap)
 
                 const snapshot = this.localTracker.getSnapshot()
-                const signals = {
-                    blinkStatus: this.localTracker.getBlinkStatus(),
-                    perclos: this.localTracker.getPerclos(),
-                    yawnStatus: this.localTracker.getYawnStatus(),
-                    emotion: this.localTracker.getEmotion()
-                }
+                const signals = this.localTracker.getSignals()
 
                 this.handleResult(snapshot, signals)
             }
