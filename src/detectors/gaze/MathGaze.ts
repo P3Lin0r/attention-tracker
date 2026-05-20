@@ -1,4 +1,3 @@
-import * as tf from "@tensorflow/tfjs"
 import { weighted_average, clamp, deg2radScalar, rad2degScalar } from "@/utils/helpers"
 import { BaseGazeDetector } from "@detectors/gaze/BaseGaze"
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision"
@@ -25,13 +24,10 @@ export class MathGazeDetector extends BaseGazeDetector {
         const gy = -Math.sin(pitchRad)
         const gz = Math.cos(yawRad) * Math.cos(pitchRad)
 
-        const result = tf.tidy(() => {
-            const v = tf.tensor1d([gx, gy, gz], "float32");
-            const norm = v.norm();
-            return v.div(norm).dataSync();
-        });
+        const len = Math.hypot(gx, gy, gz)
+        if (len === 0) return [0, 0, 0]
 
-        return [result[0], result[1], result[2]] as Vector3D
+        return [gx/len, gy/len, gz/len] 
     }
 
     private computeYawPitchFromLandmarks(landmarks: NormalizedLandmark[]): [number, number] {
@@ -49,7 +45,7 @@ export class MathGazeDetector extends BaseGazeDetector {
             const dyEye = eye.o.y - eye.i.y
             const dzEye = eye.o.z - eye.i.z
             
-            const eyeWidth3d = Math.sqrt(dxEye**2 + dyEye**2 + dzEye**2)
+            const eyeWidth3d = Math.sqrt(dxEye*dxEye + dyEye*dyEye + dzEye*dzEye)
 
             if (eyeWidth3d === 0) continue
 

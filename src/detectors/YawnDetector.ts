@@ -1,5 +1,5 @@
 import { HistoryBuffer } from "@/core/history/History"
-import {clamp, mean, median} from "@utils/helpers"
+import {clamp} from "@utils/helpers"
 
 export type YawnStatus = "NORMAL" | "YAWNING"
 
@@ -56,15 +56,26 @@ export class YawnDetector {
 
     private updateThreshold(mar: number): void {
         this.marHistory.push(mar)
-        const history = this.marHistory.values()
-        if (history.length > YawnDetector.MIN_FRAMES_FOR_THRESHOLD){
-            const med_mar = median(history)
-            const valid_mars = history.filter((v) => v < med_mar)
-            
-            if (!valid_mars.length) return
 
+        if (this.marHistory.length > YawnDetector.MIN_FRAMES_FOR_THRESHOLD){
+            const medMar = this.marHistory.median()
+
+            const marhist = this.marHistory.getMutableSnapshot()
+            const histlen = marhist.length
+            let count = 0
+            let sum = 0
+            for (let i = 0; i < histlen; i++){
+                const mar = marhist[i]
+                if (mar < medMar){
+                    count++
+                    sum += mar
+                }
+            }
+            
+            if (count === 0) return
+            
             this.threshold = clamp(
-                mean(history) * YawnDetector.THRESHOLD_SENSITIVITY,
+                (sum/count) * YawnDetector.THRESHOLD_SENSITIVITY,
                 0.3,
                 1.5
             )

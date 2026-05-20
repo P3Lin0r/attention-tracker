@@ -1,18 +1,19 @@
 import {EMOTIONS_MODEL_PATH} from "@config/constants" 
 import * as ort from "onnxruntime-web"
-
+import type { EmotionStatus } from "@/types"
 import { type Category } from "@mediapipe/tasks-vision"
-
-export type EmotionStatus = "NEUTRAL" | "HAPPY" | "SAD" | "THINKING" | "FOCUSED"
 
 export class EmotionsDetector {
     private session!: ort.InferenceSession
 
     current_emotion: EmotionStatus = "NEUTRAL"
-    blendshapesMap: Record<string, number> = {}
-
-    private emotionHistory: EmotionStatus[] = []
     private readonly HISTORY_LIMIT = 5
+    private emotionHistory = new Array<EmotionStatus>(this.HISTORY_LIMIT)
+
+    private scoresBuffer = new Float32Array(52)
+    private frequencyBuffer: Record<string, number> = {}
+    private historySize = 0
+    private writeIndex = 0
 
     async init(): Promise<void> {
         try {
@@ -25,55 +26,54 @@ export class EmotionsDetector {
     }
 
     async update(blendshapes: Category[]): Promise<void> {
-        this.blendshapesMap = blendshapes.reduce<Record<string, number>>(
-            (acc, bs)=> {
-                acc[bs.categoryName] = bs.score
-                return acc
-            }, {}
-        )
+        if (!blendshapes.length) return
 
-        const scores = blendshapes.map((bs) => bs.score)
-        const rawEmotion = await this.predictCurrentEmotion(scores)
+        for (let i = 0; i < 52; i++) {
+            this.scoresBuffer[i] = blendshapes[i].score
+        }
+        const rawEmotion = await this.predictCurrentEmotion(this.scoresBuffer)
         this.applyEmotionSmoothing(rawEmotion)
     }
 
     private applyEmotionSmoothing(newEmotion: EmotionStatus){
-        this.emotionHistory.push(newEmotion)
-        if (this.emotionHistory.length > this.HISTORY_LIMIT) {
-            this.emotionHistory.shift()
+
+        this.emotionHistory[this.writeIndex] = newEmotion
+        this.writeIndex = (this.writeIndex + 1) % this.HISTORY_LIMIT
+
+        if (this.historySize < this.HISTORY_LIMIT) {
+            this.historySize++
         }
 
-        const frequency: Partial<Record<EmotionStatus, number>> = {}
-        for (const emotion of this.emotionHistory){
-            frequency[emotion] = (frequency[emotion] || 0) + 1
+        const frequency = this.frequencyBuffer
+        for (const key in frequency) {
+            frequency[key] = 0 
         }
 
         let maxCount = 0
         let dominantEmotion = newEmotion
 
-        for (const [emo, count] of Object.entries(frequency)){
-            if (count && count > maxCount){
-                maxCount = count
-                dominantEmotion = emo as EmotionStatus
+        const len = this.historySize
+        for (let i = 0; i < len; i++){
+            const emotion = this.emotionHistory[i]
+
+            const currentCount = (frequency[emotion] || 0) + 1
+            frequency[emotion] = currentCount
+            if (currentCount > maxCount) {
+                maxCount = currentCount
+                dominantEmotion = emotion as EmotionStatus
             }
         }
 
-        if (maxCount >= 3 || this.emotionHistory.length < 3) {
-            this.current_emotion = dominantEmotion
-        }
+        this.current_emotion = dominantEmotion
     }
 
-    private async predictCurrentEmotion(scores: number[]): Promise<EmotionStatus> {
+    private async predictCurrentEmotion(scores: Float32Array): Promise<EmotionStatus> {
         try {
             if (scores.length !== 52){
                 console.warn(`Expected 52 scores, but got ${scores.length}`);
             }
             
-            const inputTensor = new ort.Tensor(
-                "float32",
-                Float32Array.from(scores),
-                [1, 52]
-            )
+            const inputTensor = new ort.Tensor("float32", scores, [1, 52])
 
             const result = await this.session.run({
                 float_input: inputTensor

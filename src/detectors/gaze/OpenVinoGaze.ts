@@ -12,6 +12,16 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
     private cropCanvas: OffscreenCanvas
     private cropCtx: OffscreenCanvasRenderingContext2D
 
+    private chwBuffer = new Float32Array(1 * 3 * 60 * 60)
+    private headPoseBuffer = new Float32Array(3)
+
+    private eyesPointsBuffer = [
+        { x: 0, y: 0 },
+        { x: 0, y: 0 },
+        { x: 0, y: 0 },
+        { x: 0, y: 0 }
+    ]
+    
     constructor(modelPath = GAZE_OV_MODEL_PATH) {
         super()
         this.modelPath = modelPath
@@ -22,7 +32,7 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
 
     async load(): Promise<void> {
         try {
-            this.session = await ort.InferenceSession.create(this.modelPath)
+            this.session = await ort.InferenceSession.create(this.modelPath, {graphOptimizationLevel: "disabled"})
             console.log("✅ ONNX openVINO Gaze Model loaded:");
             console.log("Inputs:", this.session.inputNames);
             console.log("Outputs:", this.session.outputNames);
@@ -45,14 +55,13 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
 
         if (!leftEyeTensor || !rightEyeTensor) return null;
         
-        const correctedHeadAngles = [
-            head_angles[0], // Yaw 
-            head_angles[1], // Pitch
-            head_angles[2]  // Roll
-        ];
+        this.headPoseBuffer[0] = head_angles[0] // Yaw 
+        this.headPoseBuffer[1] = head_angles[1] // Pitch
+        this.headPoseBuffer[2] = head_angles[2] // Roll
+
         const headPoseTensor = new ort.Tensor(
             "float32",
-            Float32Array.from(correctedHeadAngles),
+            this.headPoseBuffer,
             [1, 3]
         )
 
@@ -76,7 +85,7 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
 
             let sumSq = 0
             for (let i = 0; i < v.length; i++){
-                sumSq += v[i] ** 2
+                sumSq += v[i] * v[i]
             }
 
             const norm = Math.sqrt(sumSq)
@@ -104,10 +113,25 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
     ): ort.Tensor | null {
         
         const idxs = eyeType === "left" ? [362, 263, 386, 374] : [133, 33, 159, 145];
-        const points = idxs.map(i => ({ x: landmarks[i].x * frameW, y: landmarks[i].y * frameH }));
+        
+        for (let i = 0; i < 4; i++) {
+            const pt = this.eyesPointsBuffer[i] 
+            const landmark = landmarks[idxs[i]]
+            pt.x = landmark.x * frameW
+            pt.y = landmark.y * frameH
+        }
+        const points = this.eyesPointsBuffer
 
-        const centerX = points.reduce((sum, p) => sum + p.x, 0) / 4;
-        const centerY = points.reduce((sum, p) => sum + p.y, 0) / 4;
+        let sumX = 0
+        let sumY = 0
+        const lenPoints = points.length;
+        for (let i = 0; i < lenPoints; i++) {
+            const p = points[i] 
+            sumX += p.x
+            sumY += p.y
+        }
+        const centerX = sumX / lenPoints
+        const centerY = sumY / lenPoints
 
         const dx = points[0].x - points[1].x;
         const dy = points[0].y - points[1].y;
@@ -125,31 +149,33 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
 
         if (sWidth <= 0 || sHeight <= 0) return null;
 
-        this.cropCtx.clearRect(0, 0, 60, 60);
+        this.cropCtx.clearRect(0, 0, 60, 60)
         this.cropCtx.drawImage(
             frame as CanvasImageSource, 
             xMin, yMin, sWidth, sHeight,
             0, 0, 60, 60
-        );
+        )
 
-        const imageData = this.cropCtx.getImageData(0, 0, 60, 60);
+        const imageData = this.cropCtx.getImageData(0, 0, 60, 60)
 
-        return this.imageDataToTensorCHW(imageData);
+        return this.imageDataToTensorCHW(imageData)
     }
 
     private imageDataToTensorCHW(imageData: ImageData): ort.Tensor {
-        const { data, width, height } = imageData;
-        const float32Data = new Float32Array(3 * width * height);
-        const channelPixels = width * height;
+        const { data } = imageData
+        const channelPixels = 3600
 
         for (let i = 0; i < channelPixels; i++) {
-            const rgbaIdx = i * 4;
-            float32Data[i] = data[rgbaIdx + 0];
-            float32Data[i + channelPixels] = data[rgbaIdx + 1];
-            float32Data[i + 2 * channelPixels] = data[rgbaIdx + 2];
+            const rgbaIdx = i * 4
+            const r = data[rgbaIdx + 0]
+            const g = data[rgbaIdx + 1]
+            const b = data[rgbaIdx + 2]
+
+            this.chwBuffer[i] = r
+            this.chwBuffer[i + channelPixels] = g
+            this.chwBuffer[i + 2 * channelPixels] = b
         }
-        
-        return new ort.Tensor("float32", float32Data, [1, 3, height, width]);
+        return new ort.Tensor("float32", this.chwBuffer, [1, 3, 60, 60])
     }
 
     private getFrameDimensions(frame: TexImageSource): { width: number, height: number } {

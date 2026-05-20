@@ -1,6 +1,6 @@
 import { HistoryBuffer } from "@/core/history/History"
 import type { TrackerSnapshot } from "@/types"
-import { median, clamp, rad2degScalar } from "@/utils/helpers"
+import { clamp, rad2degScalar } from "@/utils/helpers"
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision"
 
 export class CalibrationManager {
@@ -90,11 +90,11 @@ export class CalibrationManager {
     }
 
     private applyBaseline(){
-        this.baseArea = median(this.recentAreas.values())
-        this.baseYaw = median(this.recentYaws.values())
-        this.basePitch = median(this.recentPitches.values())
-        this.baseCx = median(this.recentCx.values())
-        this.baseCy = median(this.recentCy.values())
+        this.baseArea = this.recentAreas.median()
+        this.baseYaw = this.recentAreas.median()
+        this.basePitch = this.recentPitches.median()
+        this.baseCx = this.recentCx.median()
+        this.baseCy = this.recentCy.median()
 
         this.isCalibrated = true
         

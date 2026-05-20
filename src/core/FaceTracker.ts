@@ -5,7 +5,6 @@ import { YawnDetector } from "@detectors/YawnDetector"
 import { EmotionsDetector } from "@/detectors/EmotionsDetector"
 import type { GazeStrategies } from "@/detectors/gaze/BaseGaze"
 import { MathGazeDetector } from "@/detectors/gaze/MathGaze"
-import * as tf from "@tensorflow/tfjs"
 
 import {
     FaceLandmarker,
@@ -25,10 +24,14 @@ export class FaceTracker{
     private landmarker!: FaceLandmarker
     private latestResult: FaceLandmarkerResult | null = null
 
-    private currentGaze: tf.Tensor1D | null = null
+    private currentGaze: Float32Array = new Float32Array(3)
+    private hasGaze = false
+    private currentHeadAngles: Vector3D | null = null
 
     private earTracker = new EyeAspectRatioTracker()
     private marTracker = new MouthAspectRatioTracker()
+    private currentEAR: number = 0;
+    private currentMAR: number = 0;
 
     private blinkDetector = new BlinkDetector()
     private yawnDetector = new YawnDetector()
@@ -77,7 +80,7 @@ export class FaceTracker{
 
         } catch (error) {
             console.error("Failed to manually load MediaPipe WASM loader:", error);
-            return
+            throw error
         }
 
         // initialising emotions model
@@ -106,22 +109,22 @@ export class FaceTracker{
         if (!result.faceLandmarks.length || result.faceLandmarks[0] == null || result.faceBlendshapes[0] == null) return
         const lm = result.faceLandmarks[0]
         const bm = result.faceBlendshapes[0].categories // Category
-        const headAngles = this.getHeadAngles()
+        this.currentHeadAngles = this.getHeadAngles()
 
         // EAR
         const {left: earLeft, right: earRight}= this.earTracker.calculate(lm)
-        const currentEAR = (earLeft + earRight)/2
-        this.blinkDetector.update(currentEAR)
+        this.currentEAR = (earLeft + earRight)/2
+        this.blinkDetector.update(this.currentEAR)
         
         // MAR
-        const currentMAR = this.marTracker.calculate(lm)
-        this.yawnDetector.update(currentMAR)
+        this.currentMAR = this.marTracker.calculate(lm)
+        this.yawnDetector.update(this.currentMAR)
 
         // Emotions + Gaze
         const emotionsPromise = this.emotionsDetector.update(bm)
 
-        let gazePromise = Promise.resolve(null as number[] | null)
-        if (headAngles?.length){
+        let gazePromise = Promise.resolve(null as Vector3D | null)
+        if (this.currentHeadAngles?.length){
             let activeGaze
 
             if (this.gazeStrategy === "auto"){
@@ -133,7 +136,7 @@ export class FaceTracker{
                 activeGaze = this.gazeStrategies.MATH
             }
 
-            gazePromise = activeGaze.predict(lm, video, headAngles)
+            gazePromise = activeGaze.predict(lm, video, this.currentHeadAngles)
         }
 
         const [_, newGaze] = await Promise.all([
@@ -148,43 +151,41 @@ export class FaceTracker{
         } 
     }
 
-    private updateGaze(newGaze: number[] | null){
-        if (newGaze != null ){
-            const oldTensor = this.currentGaze
+    private updateGaze(newGaze: Vector3D | Float32Array | null){
+        if (!newGaze) return;
 
-            this.currentGaze = tf.tidy(()=>{
-                const newTensor = tf.tensor1d(newGaze)
-
-                if (!oldTensor)
-                    return newTensor
-
-                return tf.add(
-                    tf.mul(oldTensor, 0.7),
-                    tf.mul(newGaze, 0.3),
-                ) as tf.Tensor1D
-            })
-            oldTensor?.dispose()
+        if (!this.hasGaze) {
+            this.currentGaze[0] = newGaze[0];
+            this.currentGaze[1] = newGaze[1];
+            this.currentGaze[2] = newGaze[2];
+            this.hasGaze = true;
+        } else {
+            this.currentGaze[0] = this.currentGaze[0] * 0.7 + newGaze[0] * 0.3;
+            this.currentGaze[1] = this.currentGaze[1] * 0.7 + newGaze[1] * 0.3;
+            this.currentGaze[2] = this.currentGaze[2] * 0.7 + newGaze[2] * 0.3;
         }
     }
 
     private getHeadAngles(): Vector3D | null {
-        if (this.latestResult == null || !this.latestResult.facialTransformationMatrixes.length){
-            return null
-        }
+        const matrixes = this.latestResult?.facialTransformationMatrixes;
+        if (!matrixes || matrixes.length === 0) return null;
 
-        const matrix = this.latestResult.facialTransformationMatrixes[0]?.data
+        const matrix = matrixes[0]?.data
+        if (!matrix || matrix.length < 16) return null;
+
+        const yaw_rad = Math.asin(matrix[8])
+        const pitch_rad = Math.atan2(-matrix[9], matrix[10])
+        const roll_rad = Math.atan2(-matrix[4], matrix[0])
         
-        const yaw_rad = Math.asin(matrix[0, 2])
-        const pitch_rad = Math.atan2(-matrix[1, 2], matrix[2, 2])
-        const roll_rad = Math.atan2(-matrix[0, 1], matrix[0, 0])
-        
-        if (isNaN(yaw_rad) || isNaN(pitch_rad) || isNaN(roll_rad)){
-            return null
+        if (yaw_rad !== yaw_rad || pitch_rad !== pitch_rad || roll_rad !== roll_rad) {
+            return null;
         }
-
-        const head_rad_list = [yaw_rad, pitch_rad, roll_rad] 
-
-        return head_rad_list.map((v)=> rad2degScalar(v)) as Vector3D
+        
+        return [
+            rad2degScalar(yaw_rad),
+            rad2degScalar(pitch_rad),
+            rad2degScalar(roll_rad)
+        ] as Vector3D
     }
 
     getSnapshot(): TrackerSnapshot {

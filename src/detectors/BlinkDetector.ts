@@ -1,5 +1,4 @@
 import { HistoryBuffer } from "@/core/history/History"
-import {mean, median} from "@utils/helpers"
 
 export type BlinkStatus = "NORMAL" | "DROWSY" | "MICROSLEEP"
 
@@ -72,26 +71,35 @@ export class BlinkDetector {
 
     private updateThreshold(ear: number): void{
         this.earHistory.push(ear)
-        const erahist = this.earHistory.values()
-        if (erahist.length < BlinkDetector.MIN_FRAMES_FOR_THRESHOLD) return
+        
+        if (this.earHistory.length < BlinkDetector.MIN_FRAMES_FOR_THRESHOLD) return
+        
+        const medEar = this.earHistory.median()
+        
+        const earhist = this.earHistory.getMutableSnapshot()
+        const histlen = earhist.length
 
-        const medEar = median(erahist)
-        const validEars = erahist.filter((v)=> v > medEar)
+        let count = 0
+        let sum = 0
+        for (let i = 0; i < histlen; i++){
+            const ear = earhist[i]
+            if (ear > medEar) {
+                count++
+                sum += ear
+            }
+        }
         
-        if (!validEars.length) return
+        if (count === 0) return
         
-        this.threshold = mean(validEars) * BlinkDetector.THRESHOLD_SENSITIVITY
+        this.threshold = (sum/count) * BlinkDetector.THRESHOLD_SENSITIVITY
     }
 
     private calculatePerclos(): void {
-        const clhist = this.closureHistory.values()
-        if (!clhist.length) {
+        if (!this.closureHistory.length) {
             this.perclosScore = 0
             return
         }
 
-        const closedFrames = clhist.reduce((sum, val) => sum + val, 0)
-
-        this.perclosScore = closedFrames / clhist.length
+        this.perclosScore = this.closureHistory.mean()
     }
 }
