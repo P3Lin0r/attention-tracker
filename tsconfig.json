@@ -15,7 +15,7 @@
       "@config/*": ["./src/config/*"],
       "@utils/*": ["./src/utils/*"],
       "@detectors/*": ["./src/detectors/*"],
-      "@analitics/*": ["./src/analitics/*"],
+      "@analytics/*": ["./src/analytics/*"],
       "@core/*": ["./src/core/*"],
       "@workers/*": ["./src/workers/*"],
       "@api/*": ["./src/api/*"],

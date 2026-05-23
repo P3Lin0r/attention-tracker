@@ -10,7 +10,7 @@ export default defineConfig({
             "@config": path.resolve(__dirname, "./src/config"),
             "@utils": path.resolve(__dirname, "./src/utils"),
             "@detectors": path.resolve(__dirname, "./src/detectors"),
-            "@analitics": path.resolve(__dirname, "./src/analitics"),
+            "@analytics": path.resolve(__dirname, "./src/analytics"),
             "@core": path.resolve(__dirname, "./src/core"),
             "@workers": path.resolve(__dirname, "./src/workers"),
             "@api": path.resolve(__dirname, "./src/api")

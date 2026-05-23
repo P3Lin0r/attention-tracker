@@ -1,5 +1,5 @@
-import { CalibrationManager } from "@/analitics/CalibrationManager"
-import { AttentionEngine } from "@/analitics/AttentionEngine"
+import { CalibrationManager } from "@/analytics/CalibrationManager"
+import { AttentionEngine } from "@/analytics/AttentionEngine"
 import type { AttentionResult, MonitorConfig, TrackerSnapshot, Signals } from "@/types";
 
 import TrackerWorker from "@workers/tracker.worker?worker"
