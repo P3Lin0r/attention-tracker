@@ -98,13 +98,19 @@ export class HistoryBuffer {
         }
     }
     
-    get isFull(): boolean {
-        if (this.count < 2) return false
-        const lastIndex = ((this.head - 1) % this.capacity) % this.capacity
+    get timeSpanMs(): number {
+        if (this.count < 2) return 0
+        
+        const lastIndex = (this.head - 1 + this.capacity) % this.capacity
+
         const firstTimestamp = this.timestamps[this.tail]
         const lastTimestamp = this.timestamps[lastIndex]
         
-        return (lastTimestamp - firstTimestamp) >= (this.timeWindowMs * 0.9)
+        return lastTimestamp - firstTimestamp
+    }
+
+    get isFull(): boolean {       
+        return this.timeSpanMs >= (this.timeWindowMs * 0.9)
     }
 
     get length(): number {

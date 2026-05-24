@@ -3,7 +3,7 @@ import { HistoryBuffer } from "@/core/history/History"
 export type BlinkStatus = "NORMAL" | "DROWSY" | "MICROSLEEP"
 
 export class BlinkDetector {
-    private static readonly MIN_FRAMES_FOR_THRESHOLD = 30
+    private static readonly MIN_CALIBRATION_TIME_MS = 1000
     private static readonly THRESHOLD_SENSITIVITY = 0.72
 
     private static readonly MICROSLEEP_LIMIT = 3.0
@@ -72,7 +72,7 @@ export class BlinkDetector {
     private updateThreshold(ear: number): void{
         this.earHistory.push(ear)
         
-        if (this.earHistory.length < BlinkDetector.MIN_FRAMES_FOR_THRESHOLD) return
+        if (this.earHistory.timeSpanMs < BlinkDetector.MIN_CALIBRATION_TIME_MS) return
         
         const medEar = this.earHistory.median()
         

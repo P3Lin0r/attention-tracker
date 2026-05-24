@@ -5,7 +5,7 @@ export type YawnStatus = "NORMAL" | "YAWNING"
 
 export class YawnDetector {
     private static readonly THRESHOLD_SENSITIVITY = 2.2
-    private static readonly MIN_FRAMES_FOR_THRESHOLD = 50
+    private static readonly MIN_CALIBRATION_TIME_MS = 1500
 
     private static readonly MIN_YAWN_DURATION = 1.5
     private static readonly MAX_YAWN_DURATION = 8
@@ -57,7 +57,7 @@ export class YawnDetector {
     private updateThreshold(mar: number): void {
         this.marHistory.push(mar)
 
-        if (this.marHistory.length > YawnDetector.MIN_FRAMES_FOR_THRESHOLD){
+        if (this.marHistory.timeSpanMs > YawnDetector.MIN_CALIBRATION_TIME_MS){
             const medMar = this.marHistory.median()
 
             const marhist = this.marHistory.getMutableSnapshot()
