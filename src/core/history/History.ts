@@ -97,6 +97,12 @@ export class HistoryBuffer {
             return (a + b) / 2
         }
     }
+
+    clear(): void {
+        this.tail = 0
+        this.head = 0
+        this.count = 0
+    }
     
     get timeSpanMs(): number {
         if (this.count < 2) return 0

@@ -30,24 +30,27 @@ export class FaceTracker{
 
     private earTracker = new EyeAspectRatioTracker()
     private marTracker = new MouthAspectRatioTracker()
-    private currentEAR: number = 0;
-    private currentMAR: number = 0;
+    private currentEAR: number = 0
+    private currentMAR: number = 0
 
     private blinkDetector = new BlinkDetector()
     private yawnDetector = new YawnDetector()
-
     private emotionsDetector = new EmotionsDetector()
+
+    private perfMonitor = new PerformanceMonitor()
 
     private gazeStrategies: GazeStrategies = {
         "MATH": new MathGazeDetector(),
         "OPENVINO": new OpenVINOGazeDetector(),
     }
     
-    private perfMonitor = new PerformanceMonitor()
+    private lastFaceDetectedTime: number = 0
+    private readonly FACE_LOST_THRESHOLD_MS = 2000
+    private isFaceLost: boolean = false
 
     public readonly device: deviceOptions
     public readonly gazeStrategy: GazeStrategy
-
+    
     constructor(device: deviceOptions = "CPU", gazeStrategy: GazeStrategy = "auto"){
         this.device = device
         this.gazeStrategy = gazeStrategy
@@ -106,7 +109,18 @@ export class FaceTracker{
         const result = this.landmarker.detectForVideo(video, now)
         this.latestResult = result
 
-        if (!result.faceLandmarks.length || result.faceLandmarks[0] == null || result.faceBlendshapes[0] == null) return
+        if (!result.faceLandmarks.length || result.faceLandmarks[0] == null || result.faceBlendshapes[0] == null) {
+            if (!this.isFaceLost && (now - this.lastFaceDetectedTime > this.FACE_LOST_THRESHOLD_MS)) {
+                this.handleFaceLost()
+            }
+            return
+        }
+
+        if (this.isFaceLost) {
+            this.handleFaceFound()
+        }
+        this.lastFaceDetectedTime = now
+
         const lm = result.faceLandmarks[0]
         const bm = result.faceBlendshapes[0].categories // Category
         this.currentHeadAngles = this.getHeadAngles()
@@ -188,9 +202,23 @@ export class FaceTracker{
         ] as Vector3D
     }
 
+    private handleFaceLost(): void {
+        this.isFaceLost = true
+        this.currentEAR = 0
+        this.currentMAR = 0
+        this.blinkDetector.reset()
+        this.yawnDetector.reset()
+    }
+
+    private handleFaceFound(): void {
+        this.isFaceLost = false
+    }
+
+
     getSnapshot(): TrackerSnapshot {
         return {
-            landmarks: this.latestResult?.faceLandmarks[0],
+            isFaceLost: this.isFaceLost,
+            landmarks: this.latestResult?.faceLandmarks[0] || null,
             gaze: this.currentGaze,
             headAngles: this.currentHeadAngles
         }

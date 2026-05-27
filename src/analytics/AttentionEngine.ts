@@ -58,6 +58,10 @@ export class AttentionEngine {
             return this.buildResult(details)
         }
 
+        if (!calibrationState.isCalibrated) {
+            return this.buildResult(details)
+        }
+
         // SOFT SCORE
         if (snapshot.gaze && calibrationState.isCalibrated){
             const [gx, gy, gz] = snapshot.gaze
@@ -140,6 +144,16 @@ export class AttentionEngine {
             this.targetStatus = calculatedTarget
             this.statusHoldStartTime = now
         }
+    }
+
+    reset(){
+        this.yawHistory.clear()
+        this.pitchHistory.clear()
+
+        this.score = 1
+        this.status = "NORMAL"
+        this.targetStatus = "NORMAL"
+        this.statusHoldStartTime = null
     }
 
     private buildResult(details: AttentionDetails) {

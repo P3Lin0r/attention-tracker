@@ -102,4 +102,11 @@ export class BlinkDetector {
 
         this.perclosScore = this.closureHistory.mean()
     }
+
+    reset(): void {
+        this.earHistory.clear()
+        this.closureHistory.clear()
+        this.startCloseTime = 0
+        this.isClosed = false
+    }
 }

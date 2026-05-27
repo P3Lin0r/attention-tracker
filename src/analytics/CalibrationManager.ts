@@ -91,7 +91,7 @@ export class CalibrationManager {
 
     private applyBaseline(){
         this.baseArea = this.recentAreas.median()
-        this.baseYaw = this.recentAreas.median()
+        this.baseYaw = this.recentYaws.median()
         this.basePitch = this.recentPitches.median()
         this.baseCx = this.recentCx.median()
         this.baseCy = this.recentCy.median()
@@ -104,6 +104,18 @@ export class CalibrationManager {
             pitch: this.basePitch,
             center: { x: this.baseCx, y: this.baseCy}
         })
+    }
+
+    reset(): void {
+        this.recentAreas.clear()
+        this.recentPitches.clear()
+        this.recentYaws.clear()
+        this.recentCx.clear()
+        this.recentCy.clear()
+        
+        this.isCalibrated = false
+        this.anomalyAccumulatorMs = 0
+        this.lastUpdateTime = 0
     }
     
     getState(){

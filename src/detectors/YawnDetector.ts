@@ -81,4 +81,10 @@ export class YawnDetector {
             )
         }
     }
+
+    reset(): void {
+        this.marHistory.clear()
+        this.startOpenTime = 0
+        this.isYawning = false
+    }
 }

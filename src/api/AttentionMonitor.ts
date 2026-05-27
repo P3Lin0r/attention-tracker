@@ -24,6 +24,8 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
     private isRunning = false
     private videoElement: TexImageSource | null = null
     private animationFrameId: number | null = null
+
+    private wasFaceLost: boolean = false
     
     private constructor(config: MonitorConfig) {
         super()
@@ -97,9 +99,40 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
     }
 
     private handleResult(snapshot: TrackerSnapshot, signals: Signals) {
+
+        if (snapshot.isFaceLost){
+            if (!this.wasFaceLost){
+                this.calibration.reset()
+                this.engine.reset()
+                this.wasFaceLost = true
+            }
+            
+            const emptyResult: AttentionResult = {
+                status: "NOT_DETECTED",
+                score: 0,
+                details: {
+                    penalties: { gaze: 0, perclos: 0, yawn: 0, emotionModifier: 1 },
+                    isADHD: false,
+                    direction: {}
+                },
+                signals: signals,
+                snapshot: snapshot,
+                calibration: this.calibration.getState()
+            }
+            
+            this.emit("attention", emptyResult)
+            if (this.isRunning){
+                this.animationFrameId = requestAnimationFrame(()=>this.processNextFrame())
+            }
+            return
+        }
+
+        if (this.wasFaceLost) {
+            this.wasFaceLost = false
+        }
+        
         this.calibration.update(snapshot)
         const calibState = this.calibration.getState()
-
         const engineData = this.engine.analyze(snapshot, calibState, signals)
 
         const finalResult: AttentionResult = {

@@ -4,7 +4,7 @@ import type { YawnStatus } from "@detectors/YawnDetector"
 
 export type GazeStrategy = "auto" | "openvino" | "math"
 export type Vector3D = [number, number, number]
-export type AttentionStatus = "DISTRACTED" | "NORMAL" | "DROWSY" | "MICROSLEEP" | "ADHD"
+export type AttentionStatus = "DISTRACTED" | "NORMAL" | "DROWSY" | "MICROSLEEP" | "ADHD" | "NOT_DETECTED"
 export type EmotionStatus = "NEUTRAL" | "HAPPY" | "SAD" | "THINKING" | "FOCUSED"
 
 export interface MonitorConfig {
@@ -14,6 +14,7 @@ export interface MonitorConfig {
 }
 
 export type TrackerSnapshot = {
+    isFaceLost: boolean
     landmarks: NormalizedLandmark[] | null
     gaze?: Vector3D
     headAngles?: Vector3D
