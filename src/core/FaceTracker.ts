@@ -3,7 +3,7 @@ import { EyeAspectRatioTracker, MouthAspectRatioTracker } from "@detectors/Aspec
 import { BlinkDetector } from "@detectors/BlinkDetector"
 import { YawnDetector } from "@detectors/YawnDetector"
 import { EmotionsDetector } from "@/detectors/EmotionsDetector"
-import type { GazeStrategies } from "@/detectors/gaze/BaseGaze"
+import type { BaseGazeDetector, GazeStrategies } from "@/detectors/gaze/BaseGaze"
 import { MathGazeDetector } from "@/detectors/gaze/MathGaze"
 
 import {
@@ -139,18 +139,15 @@ export class FaceTracker{
 
         let gazePromise = Promise.resolve(null as Vector3D | null)
         if (this.currentHeadAngles?.length){
-            let activeGaze
-
+            let strategy: BaseGazeDetector
             if (this.gazeStrategy === "auto"){
-                const useMathGaze = this.perfMonitor.shouldDowngrade()
-                activeGaze = useMathGaze ? this.gazeStrategies.MATH : this.gazeStrategies.OPENVINO
+                strategy = this.perfMonitor.shouldDowngrade() ? this.gazeStrategies.MATH : this.gazeStrategies.OPENVINO
             } else if (this.gazeStrategy === "openvino") {
-                activeGaze = this.gazeStrategies.OPENVINO
+                strategy = this.gazeStrategies.OPENVINO
             } else {
-                activeGaze = this.gazeStrategies.MATH
+                strategy = this.gazeStrategies.MATH
             }
-
-            gazePromise = activeGaze.predict(lm, video, this.currentHeadAngles)
+            gazePromise = strategy.predict(lm, video, this.currentHeadAngles)
         }
 
         const [_, newGaze] = await Promise.all([
@@ -208,6 +205,7 @@ export class FaceTracker{
         this.currentMAR = 0
         this.blinkDetector.reset()
         this.yawnDetector.reset()
+        this.perfMonitor.reset()
     }
 
     private handleFaceFound(): void {
