@@ -1,6 +1,8 @@
 import { CalibrationManager } from "@/analytics/CalibrationManager"
 import { AttentionEngine } from "@/analytics/AttentionEngine"
-import type { AttentionResult, MonitorConfig, TrackerSnapshot, Signals } from "@/types";
+import type { AttentionResult, TrackerSnapshot, Signals } from "@/types";
+import type { MonitorConfig } from "@/types";
+import { deepMerge, DEFAULT_CONFIG, type DeepPartial } from "@/config/defaults";
 
 import TrackerWorker from "@workers/tracker.worker?worker"
 import { EventEmitter } from "@/api/EventEmitter";
@@ -26,21 +28,17 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
     private animationFrameId: number | null = null
 
     private wasFaceLost: boolean = false
-    
+
     private constructor(config: MonitorConfig) {
         super()
         this.config = config
-        this.calibration = new CalibrationManager()
-        this.engine = new AttentionEngine()
+        this.calibration = new CalibrationManager(this.config.settings.calibration)
+        this.engine = new AttentionEngine(this.config.settings.engine)
     }
 
-    public static async create(config: Partial<MonitorConfig> = {}): Promise<AttentionMonitor> {
-        const defaultConfig: MonitorConfig = {
-            worker: true,
-            backend: "CPU",
-            gazeStrategy: "auto",
-        }
-        const monitor = new AttentionMonitor({...defaultConfig, ...config})
+    public static async create(userConfig: DeepPartial<MonitorConfig> = {}): Promise<AttentionMonitor> {
+        const finalConfig = deepMerge<MonitorConfig>(DEFAULT_CONFIG, userConfig)
+        const monitor = new AttentionMonitor(finalConfig)
 
         await monitor.init()
         return monitor
@@ -89,7 +87,7 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
 
     private async initLocal(): Promise<void> {
         try {
-            this.localTracker = new FaceTracker(this.config.backend, this.config.gazeStrategy)
+            this.localTracker = new FaceTracker(this.config)
             await this.localTracker.init()
             this.emit("ready")
         } catch (error: any) {

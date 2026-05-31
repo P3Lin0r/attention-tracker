@@ -1,16 +1,11 @@
 import { HistoryBuffer } from "@/core/history/History"
+import type { YawnConfig, YawnStatus } from "@/types"
 import {clamp} from "@utils/helpers"
 
-export type YawnStatus = "NORMAL" | "YAWNING"
-
 export class YawnDetector {
-    private static readonly THRESHOLD_SENSITIVITY = 2.2
     private static readonly MIN_CALIBRATION_TIME_MS = 1500
 
-    private static readonly MIN_YAWN_DURATION = 1.5
-    private static readonly MAX_YAWN_DURATION = 8
-
-    private marHistory = new HistoryBuffer(10)
+    private marHistory: HistoryBuffer
 
     threshold = 0.8
     yawnCount = 0
@@ -20,7 +15,8 @@ export class YawnDetector {
 
     status: YawnStatus = "NORMAL"
 
-    constructor(){
+    constructor(private config: YawnConfig){
+        this.marHistory = new HistoryBuffer(this.config.marTimeWindow)
     }
 
     update(currentMAR: number): void {
@@ -35,7 +31,7 @@ export class YawnDetector {
                 this.startOpenTime = now   
             } else {
                 const duration = now - this.startOpenTime 
-                if (duration > YawnDetector.MIN_YAWN_DURATION){
+                if (duration > this.config.minYawnDuration){
                     this.status = "YAWNING"
                 }
             }
@@ -43,8 +39,8 @@ export class YawnDetector {
             if (this.isYawning){
                 const duration = now - this.startOpenTime
                 
-                if ( duration > YawnDetector.MIN_YAWN_DURATION &&
-                     duration < YawnDetector.MAX_YAWN_DURATION
+                if ( duration > this.config.minYawnDuration &&
+                     duration < this.config.maxYawnDuration
                 ) {
                     this.yawnCount++
                 }
@@ -75,7 +71,7 @@ export class YawnDetector {
             if (count === 0) return
             
             this.threshold = clamp(
-                (sum/count) * YawnDetector.THRESHOLD_SENSITIVITY,
+                (sum/count) * this.config.thresholdSensitivity,
                 0.3,
                 1.5
             )

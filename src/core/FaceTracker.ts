@@ -16,7 +16,7 @@ import {
 import { OpenVINOGazeDetector } from "@/detectors/gaze/OpenVinoGaze"
 import { PerformanceMonitor } from "./performance/PerformanceMonitor"
 import { rad2degScalar } from "@/utils/helpers"
-import type { GazeStrategy, Signals, TrackerSnapshot, Vector3D } from "@/types"
+import type { GazeStrategy, MonitorConfig, Signals, TrackerSnapshot, Vector3D } from "@/types"
 
 type deviceOptions = "CPU" | "GPU"
 
@@ -33,9 +33,9 @@ export class FaceTracker{
     private currentEAR: number = 0
     private currentMAR: number = 0
 
-    private blinkDetector = new BlinkDetector()
-    private yawnDetector = new YawnDetector()
-    private emotionsDetector = new EmotionsDetector()
+    private blinkDetector: BlinkDetector
+    private yawnDetector: YawnDetector
+    private emotionsDetector: EmotionsDetector
 
     private perfMonitor = new PerformanceMonitor()
 
@@ -51,9 +51,14 @@ export class FaceTracker{
     public readonly device: deviceOptions
     public readonly gazeStrategy: GazeStrategy
     
-    constructor(device: deviceOptions = "CPU", gazeStrategy: GazeStrategy = "auto"){
-        this.device = device
-        this.gazeStrategy = gazeStrategy
+    constructor(private config: MonitorConfig){
+        this.device = this.config.backend
+        this.gazeStrategy = this.config.gazeStrategy
+
+        this.blinkDetector = new BlinkDetector(config.settings.blink)
+        this.yawnDetector = new YawnDetector(config.settings.yawn)
+        this.emotionsDetector = new EmotionsDetector(config.settings.emotion)
+        
     }
 
     async init(): Promise<void> {

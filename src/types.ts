@@ -1,17 +1,11 @@
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision"
-import type { BlinkStatus } from "@detectors/BlinkDetector"
-import type { YawnStatus } from "@detectors/YawnDetector"
 
 export type GazeStrategy = "auto" | "openvino" | "math"
 export type Vector3D = [number, number, number]
 export type AttentionStatus = "DISTRACTED" | "NORMAL" | "DROWSY" | "MICROSLEEP" | "ADHD" | "NOT_DETECTED"
 export type EmotionStatus = "NEUTRAL" | "HAPPY" | "SAD" | "THINKING" | "FOCUSED"
-
-export interface MonitorConfig {
-    worker?: boolean
-    backend?: "GPU" | "CPU"
-    gazeStrategy?: GazeStrategy
-}
+export type BlinkStatus = "NORMAL" | "DROWSY" | "MICROSLEEP"
+export type YawnStatus = "NORMAL" | "YAWNING"
 
 export type TrackerSnapshot = {
     isFaceLost: boolean
@@ -74,4 +68,55 @@ export type AttentionResult = {
     signals: Signals;
     snapshot: TrackerSnapshot;
     calibration: CalibrationState;
+}
+
+
+// CONFIG
+export interface BlinkConfig {
+    thresholdSensitivity: number
+    blinkDurationLimit: number
+    microsleepLimit: number
+    perclosDrowsyThreshold: number
+    earTimeWindow: number
+    perclosTimeWindow: number
+}
+
+export interface YawnConfig {
+    thresholdSensitivity: number
+    minYawnDuration: number
+    maxYawnDuration: number
+    marTimeWindow: number
+}
+
+export interface EmotionConfig {
+    historyLimit: number
+}
+
+export interface CalibrationConfig {
+    gatheringSize: number
+    maxAnomalyMs: number
+}
+
+export interface EngineConfig {
+    timeToConfirm: number
+    yawTimeWindow: number
+    pitchTimeWindow: number
+    weights: {
+        gaze: number
+        perclos: number 
+        yawn: number
+    }
+}
+
+export interface MonitorConfig {
+    worker: boolean
+    backend: "GPU" | "CPU"
+    gazeStrategy: GazeStrategy
+    settings: {
+        blink: BlinkConfig
+        yawn: YawnConfig
+        emotion: EmotionConfig
+        calibration: CalibrationConfig
+        engine: EngineConfig
+    }
 }

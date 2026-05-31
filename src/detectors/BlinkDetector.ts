@@ -1,19 +1,11 @@
 import { HistoryBuffer } from "@/core/history/History"
-
-export type BlinkStatus = "NORMAL" | "DROWSY" | "MICROSLEEP"
+import type { BlinkStatus, BlinkConfig } from "@/types"
 
 export class BlinkDetector {
     private static readonly MIN_CALIBRATION_TIME_MS = 1000
-    private static readonly THRESHOLD_SENSITIVITY = 0.72
 
-    private static readonly MICROSLEEP_LIMIT = 3.0
-    private static readonly BLINK_DURATION_LIMIT = 0.45
-    private static readonly PERCLOS_TIME_WINDOW = 60
-
-    private static readonly PERCLOS_DROWSY_THRESHOLD = 0.15
-
-    private earHistory = new HistoryBuffer(5)
-    private closureHistory = new HistoryBuffer(BlinkDetector.PERCLOS_TIME_WINDOW)
+    private earHistory: HistoryBuffer
+    private closureHistory: HistoryBuffer
 
     threshold = 0.1
     blinkCount = 0
@@ -24,7 +16,9 @@ export class BlinkDetector {
 
     status: BlinkStatus = "NORMAL"
 
-    constructor(){
+    constructor(private config: BlinkConfig){
+        this.earHistory = new HistoryBuffer(this.config.earTimeWindow)
+        this.closureHistory = new HistoryBuffer(this.config.perclosTimeWindow)
     }
 
     update(currentEAR: number): void {
@@ -43,7 +37,7 @@ export class BlinkDetector {
                 this.startCloseTime = now
             } else {
                 const duration = now - this.startCloseTime
-                if (duration > BlinkDetector.MICROSLEEP_LIMIT){
+                if (duration > this.config.microsleepLimit){
                     this.status = "MICROSLEEP"
                 }
             }
@@ -52,7 +46,7 @@ export class BlinkDetector {
                 this.isClosed = false
                 const duration = now - this.startCloseTime
                 
-                if (duration < BlinkDetector.BLINK_DURATION_LIMIT) {
+                if (duration < this.config.blinkDurationLimit) {
                     this.blinkCount++
                 }
                 if (this.status === "MICROSLEEP") {
@@ -63,7 +57,7 @@ export class BlinkDetector {
 
         if (this.status !== "MICROSLEEP"){
             this.status = 
-                this.perclosScore > BlinkDetector.PERCLOS_DROWSY_THRESHOLD
+                this.perclosScore > this.config.perclosDrowsyThreshold
                 ? "DROWSY"
                 : "NORMAL"
         }
@@ -91,7 +85,7 @@ export class BlinkDetector {
         
         if (count === 0) return
         
-        this.threshold = (sum/count) * BlinkDetector.THRESHOLD_SENSITIVITY
+        this.threshold = (sum/count) * this.config.thresholdSensitivity
     }
 
     private calculatePerclos(): void {

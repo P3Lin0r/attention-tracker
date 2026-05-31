@@ -4,26 +4,25 @@ import type {
     AttentionStatus,
     Signals,
     TrackerSnapshot,
-    CalibrationState
+    CalibrationState,
+    EngineConfig
 } from "@/types";
 import { HistoryBuffer } from "@/core/history/History";
 
 
 export class AttentionEngine {
-    private bufferSize = 4
-
-    private yawHistory = new HistoryBuffer(this.bufferSize)
-    private pitchHistory = new HistoryBuffer(this.bufferSize)
+    private yawHistory: HistoryBuffer
+    private pitchHistory: HistoryBuffer
 
     status: AttentionStatus = "NORMAL"
     score = 1
 
     private targetStatus: AttentionStatus = "NORMAL"
-
     private statusHoldStartTime: number | null = null
-    private readonly TIME_TO_CONFIRM_MS = 500
 
-    constructor(){
+    constructor(private config: EngineConfig){
+        this.yawHistory = new HistoryBuffer(this.config.yawTimeWindow) 
+        this.pitchHistory = new HistoryBuffer(this.config.pitchTimeWindow) 
     }
 
     analyze(
@@ -100,9 +99,9 @@ export class AttentionEngine {
         }
 
         const totalPenalty = (
-            details.penalties.gaze  * 0.5 +
-            details.penalties.perclos * 0.35 + 
-            details.penalties.yawn * 0.15
+            details.penalties.gaze  * this.config.weights.gaze +
+            details.penalties.perclos * this.config.weights.perclos + 
+            details.penalties.yawn * this.config.weights.yawn
         ) * details.penalties.emotionModifier
 
         const newRawScore = clamp(1 - totalPenalty, 0, 1)
@@ -137,7 +136,7 @@ export class AttentionEngine {
         
         const now = performance.now()
         if (calculatedTarget === this.targetStatus){
-            if (this.statusHoldStartTime !== null && (now - this.statusHoldStartTime >= this.TIME_TO_CONFIRM_MS)){
+            if (this.statusHoldStartTime !== null && (now - this.statusHoldStartTime >= this.config.timeToConfirm)){
                 this.status = this.targetStatus
             }
         } else {

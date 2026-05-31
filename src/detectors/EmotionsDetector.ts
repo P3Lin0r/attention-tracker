@@ -1,19 +1,22 @@
 import {EMOTIONS_MODEL_PATH} from "@config/constants" 
 import * as ort from "onnxruntime-web"
-import type { EmotionStatus } from "@/types"
+import type { EmotionConfig, EmotionStatus } from "@/types"
 import { type Category } from "@mediapipe/tasks-vision"
 
 export class EmotionsDetector {
     private session!: ort.InferenceSession
 
     current_emotion: EmotionStatus = "NEUTRAL"
-    private readonly HISTORY_LIMIT = 5
-    private emotionHistory = new Array<EmotionStatus>(this.HISTORY_LIMIT)
+    private emotionHistory: Array<EmotionStatus>
 
     private scoresBuffer = new Float32Array(52)
     private frequencyBuffer: Record<string, number> = {}
     private historySize = 0
     private writeIndex = 0
+
+    constructor(private config: EmotionConfig) {
+        this.emotionHistory = new Array<EmotionStatus>(this.config.historyLimit)
+    }
 
     async init(): Promise<void> {
         try {
@@ -38,9 +41,9 @@ export class EmotionsDetector {
     private applyEmotionSmoothing(newEmotion: EmotionStatus){
 
         this.emotionHistory[this.writeIndex] = newEmotion
-        this.writeIndex = (this.writeIndex + 1) % this.HISTORY_LIMIT
+        this.writeIndex = (this.writeIndex + 1) % this.config.historyLimit
 
-        if (this.historySize < this.HISTORY_LIMIT) {
+        if (this.historySize < this.config.historyLimit) {
             this.historySize++
         }
 

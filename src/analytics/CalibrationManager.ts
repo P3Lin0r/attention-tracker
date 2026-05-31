@@ -1,16 +1,14 @@
 import { HistoryBuffer } from "@/core/history/History"
-import type { TrackerSnapshot } from "@/types"
+import type { CalibrationConfig, TrackerSnapshot } from "@/types"
 import { clamp, rad2degScalar } from "@/utils/helpers"
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision"
 
 export class CalibrationManager {
-    private gatheringSize: number = 2
-
-    private recentAreas = new HistoryBuffer(this.gatheringSize)
-    private recentYaws = new HistoryBuffer(this.gatheringSize)
-    private recentPitches = new HistoryBuffer(this.gatheringSize)
-    private recentCx = new HistoryBuffer(this.gatheringSize)
-    private recentCy = new HistoryBuffer(this.gatheringSize)
+    private recentAreas: HistoryBuffer
+    private recentYaws: HistoryBuffer
+    private recentPitches: HistoryBuffer
+    private recentCx: HistoryBuffer
+    private recentCy: HistoryBuffer
     
     private baseArea = 0
     private baseYaw = 0
@@ -21,9 +19,13 @@ export class CalibrationManager {
     isCalibrated = false
     private anomalyAccumulatorMs = 0
     private lastUpdateTime = 0
-    private readonly MAX_ANOMALY_MS = 5000
 
-    constructor(){
+    constructor(private config: CalibrationConfig) {
+        this.recentAreas = new HistoryBuffer(this.config.gatheringSize)
+        this.recentYaws = new HistoryBuffer(this.config.gatheringSize)
+        this.recentPitches = new HistoryBuffer(this.config.gatheringSize)
+        this.recentCx = new HistoryBuffer(this.config.gatheringSize)
+        this.recentCy = new HistoryBuffer(this.config.gatheringSize)
     }
 
     update(data: TrackerSnapshot){
@@ -82,8 +84,7 @@ export class CalibrationManager {
             this.anomalyAccumulatorMs = Math.max(0, this.anomalyAccumulatorMs - dt)
         }
 
-        if (this.anomalyAccumulatorMs >= this.MAX_ANOMALY_MS){
-            console.log("Recalibration triggered")
+        if (this.anomalyAccumulatorMs >= this.config.maxAnomalyMs){
             this.applyBaseline()
             this.anomalyAccumulatorMs = 0
         }

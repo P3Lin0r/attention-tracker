@@ -12,7 +12,7 @@ self.onmessage = async (e: MessageEvent) => {
 
     if (type == "INIT") {
         const config: MonitorConfig = payload.config
-        tracker = new FaceTracker(config.backend, config.gazeStrategy)
+        tracker = new FaceTracker(config)
         await tracker.init()
         self.postMessage({type: "INIT_DONE"})
     }
