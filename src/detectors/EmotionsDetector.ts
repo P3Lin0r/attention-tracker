@@ -1,10 +1,11 @@
-import {EMOTIONS_MODEL_PATH} from "@config/constants" 
 import * as ort from "onnxruntime-web"
 import type { EmotionConfig, EmotionStatus } from "@/types"
 import { type Category } from "@mediapipe/tasks-vision"
 
 export class EmotionsDetector {
     private session!: ort.InferenceSession
+
+    readonly modelPath: string
 
     current_emotion: EmotionStatus = "NEUTRAL"
     private emotionHistory: Array<EmotionStatus>
@@ -14,13 +15,14 @@ export class EmotionsDetector {
     private historySize = 0
     private writeIndex = 0
 
-    constructor(private config: EmotionConfig) {
+    constructor(private config: EmotionConfig, modelPath: string) {
         this.emotionHistory = new Array<EmotionStatus>(this.config.historyLimit)
+        this.modelPath = modelPath
     }
 
     async init(): Promise<void> {
         try {
-            this.session = await ort.InferenceSession.create(EMOTIONS_MODEL_PATH)
+            this.session = await ort.InferenceSession.create(this.modelPath)
             console.log("✅ ONNX Emotions Model loaded:");
         } catch (error) {
             console.error("Failed to load ONNX model:", error);

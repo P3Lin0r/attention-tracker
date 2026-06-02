@@ -108,7 +108,20 @@ export interface EngineConfig {
     }
 }
 
+export interface AssetPaths {
+    wasm: {
+        mediapipe: string
+        onnx: string
+    }
+    models: {
+        face: string
+        emotion: string
+        gazeOV: string
+    }
+}
+
 export interface MonitorConfig {
+    assets: AssetPaths
     worker: boolean
     backend: "GPU" | "CPU"
     gazeStrategy: GazeStrategy

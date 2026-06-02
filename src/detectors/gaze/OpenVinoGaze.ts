@@ -1,13 +1,12 @@
-import { GAZE_OV_MODEL_PATH } from "@/config/constants";
 import type { Vector3D } from "@/types";
 import { BaseGazeDetector } from "@detectors/gaze/BaseGaze";
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision";
 import * as ort from "onnxruntime-web"
 
 export class OpenVINOGazeDetector extends BaseGazeDetector {
-    
-    private modelPath: string
     private session!: ort.InferenceSession
+    
+    readonly modelPath: string
     
     private cropCanvas: OffscreenCanvas
     private cropCtx: OffscreenCanvasRenderingContext2D
@@ -22,7 +21,7 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
         { x: 0, y: 0 }
     ]
     
-    constructor(modelPath = GAZE_OV_MODEL_PATH) {
+    constructor(modelPath: string) {
         super()
         this.modelPath = modelPath
         

@@ -2,7 +2,22 @@ import type {
     MonitorConfig
 } from "@/types"
 
+import {dependencies} from "../../package.json"
+const MEDIAPIPE_VERSION = dependencies["@mediapipe/tasks-vision"].replace("^", "")
+const ONNX_VERSION = dependencies["onnxruntime-web"].replace("^", "")
+
 export const DEFAULT_CONFIG: MonitorConfig = {
+    assets: {
+        wasm: {
+            mediapipe: `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`,
+            onnx: `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ONNX_VERSION}/dist/`
+        },
+        models: {
+            face: "/models/face_landmarker.task",
+            emotion: "/models/emotion_model.onnx",
+            gazeOV: "/models/gaze-estimation-adas-0002.onnx"
+        }
+    },
     worker: true,
     backend: "CPU",
     gazeStrategy: "auto",

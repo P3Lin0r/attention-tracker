@@ -1,4 +1,3 @@
-import { FACE_MODEL_PATH, VISION_BASE_URL } from "@config/constants"
 import { EyeAspectRatioTracker, MouthAspectRatioTracker } from "@detectors/AspectRatio"
 import { BlinkDetector } from "@detectors/BlinkDetector"
 import { YawnDetector } from "@detectors/YawnDetector"
@@ -12,6 +11,7 @@ import {
     type FaceLandmarkerResult,
     type FaceLandmarkerOptions,
 } from "@mediapipe/tasks-vision"
+import * as ort from "onnxruntime-web"
 
 import { OpenVINOGazeDetector } from "@/detectors/gaze/OpenVinoGaze"
 import { PerformanceMonitor } from "./performance/PerformanceMonitor"
@@ -39,10 +39,7 @@ export class FaceTracker{
 
     private perfMonitor = new PerformanceMonitor()
 
-    private gazeStrategies: GazeStrategies = {
-        "MATH": new MathGazeDetector(),
-        "OPENVINO": new OpenVINOGazeDetector(),
-    }
+    private gazeStrategies: GazeStrategies
     
     private lastFaceDetectedTime: number = 0
     private readonly FACE_LOST_THRESHOLD_MS = 2000
@@ -57,12 +54,18 @@ export class FaceTracker{
 
         this.blinkDetector = new BlinkDetector(config.settings.blink)
         this.yawnDetector = new YawnDetector(config.settings.yawn)
-        this.emotionsDetector = new EmotionsDetector(config.settings.emotion)
+        this.emotionsDetector = new EmotionsDetector(config.settings.emotion, config.assets.models.emotion)
         
+        this.gazeStrategies = {
+            "MATH": new MathGazeDetector(),
+            "OPENVINO": new OpenVINOGazeDetector(config.assets.models.gazeOV),
+        }
     }
 
     async init(): Promise<void> {
-        const visionFileset = await FilesetResolver.forVisionTasks(VISION_BASE_URL)
+        ort.env.wasm.wasmPaths = this.config.assets.wasm.onnx
+        
+        const visionFileset = await FilesetResolver.forVisionTasks(this.config.assets.wasm.mediapipe)
         
         try {
             // fix web-worker + mediapipe
@@ -72,7 +75,7 @@ export class FaceTracker{
 
             const options: FaceLandmarkerOptions = {
                 baseOptions: {
-                    modelAssetPath: FACE_MODEL_PATH,
+                    modelAssetPath: this.config.assets.models.face,
                     delegate: this.device
                 },
                 runningMode: "VIDEO",
