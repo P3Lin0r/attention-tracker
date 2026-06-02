@@ -4,7 +4,7 @@ import type { AttentionResult, TrackerSnapshot, Signals } from "@/types";
 import type { MonitorConfig } from "@/types";
 import { deepMerge, DEFAULT_CONFIG, type DeepPartial } from "@/config/defaults";
 
-import TrackerWorker from "@workers/tracker.worker?worker"
+import TrackerWorker from "@workers/tracker.worker?worker&inline"
 import { EventEmitter } from "@/api/EventEmitter";
 import { FaceTracker } from "@/core/FaceTracker";
 
@@ -45,10 +45,32 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
     }
 
     private async init(): Promise<void> {
+        this.normalizeAssetPaths()
+
         if (this.config.worker) {
             await this.initWorker()
         } else {
             await this.initLocal()
+        }
+    }
+
+    private normalizeAssetPaths(): void {
+        if (!this.config.assets) return;
+        
+        for (const category in this.config.assets){
+            const categoryAssets = this.config.assets[category as keyof typeof this.config.assets]
+            
+            for (const key in categoryAssets){
+                const path = categoryAssets[key as keyof typeof categoryAssets]
+                if(path){
+                    try {
+                        const url = new URL(path, window.location.origin).href
+                        categoryAssets[key as keyof typeof categoryAssets] = url
+                    } catch (error) {
+                        console.error(`Failed to convert path ${key}:`, error);
+                    }
+                }
+            }
         }
     }
 
