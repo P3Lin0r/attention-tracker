@@ -1,7 +1,15 @@
 import { HistoryBuffer } from "@/core/history/History"
 import type { BlinkStatus, BlinkConfig } from "@/types"
 
+/**
+ * Detects blinks, drowsy states (PERCLOS), and microsleep events based on the
+ * Eye Aspect Ratio (EAR) using dynamic thresholding.
+ *
+ * @export
+ * @class BlinkDetector
+ */
 export class BlinkDetector {
+    /** @private Minimum time required to establish a baseline threshold. */
     private static readonly MIN_CALIBRATION_TIME_MS = 1000
 
     private earHistory: HistoryBuffer
@@ -15,12 +23,24 @@ export class BlinkDetector {
     private startCloseTime = 0
 
     status: BlinkStatus = "NORMAL"
-
+    
+    /**
+     * Creates an instance of BlinkDetector.
+     *
+     * @constructor
+     * @param {BlinkConfig} config Configuration parameters for limits, thresholds, windows, etc.
+     */
     constructor(private config: BlinkConfig){
         this.earHistory = new HistoryBuffer(this.config.earTimeWindow)
         this.closureHistory = new HistoryBuffer(this.config.perclosTimeWindow)
     }
 
+    /**
+     * Updates the detector with the newest EAR value. Recalculates thresholds,
+     * updates PERCLOS, and transitions status states.
+     * 
+     * @param {number} currentEAR The current combined Eye Aspect Ratio.
+     */
     update(currentEAR: number): void {
         const now = performance.now() / 1000
 
@@ -28,7 +48,7 @@ export class BlinkDetector {
 
         const currentlyClosed  = currentEAR < this.threshold
         
-        this.closureHistory.push(currentlyClosed ? 1 : 0),
+        this.closureHistory.push(currentlyClosed ? 1 : 0)
         this.calculatePerclos()
 
         if (currentlyClosed) {
@@ -62,7 +82,14 @@ export class BlinkDetector {
                 : "NORMAL"
         }
     }
-
+    
+    /**
+     * Dynamically adjusts the closure threshold based on the user's resting EAR.
+     * Uses the median of recent EAR readings.
+     *
+     * @private
+     * @param {number} ear The current EAR value.
+     */
     private updateThreshold(ear: number): void{
         this.earHistory.push(ear)
         
@@ -88,6 +115,11 @@ export class BlinkDetector {
         this.threshold = (sum/count) * this.config.thresholdSensitivity
     }
 
+    /**
+     * Calculates the percentage of frames where eyes were closed over the configured window.
+     * Updates the `perclosScore` property.
+     * @private
+     */
     private calculatePerclos(): void {
         if (!this.closureHistory.length) {
             this.perclosScore = 0
@@ -97,6 +129,7 @@ export class BlinkDetector {
         this.perclosScore = this.closureHistory.mean()
     }
 
+    /** Resets the detector, clearing all histories and resetting state variables. */
     reset(): void {
         this.earHistory.clear()
         this.closureHistory.clear()

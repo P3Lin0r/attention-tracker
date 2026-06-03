@@ -16,10 +16,16 @@ import * as ort from "onnxruntime-web"
 import { OpenVINOGazeDetector } from "@/detectors/gaze/OpenVinoGaze"
 import { PerformanceMonitor } from "./performance/PerformanceMonitor"
 import { rad2degScalar } from "@/utils/helpers"
-import type { GazeStrategy, MonitorConfig, Signals, TrackerSnapshot, Vector3D } from "@/types"
+import type { deviceOptions, GazeStrategy, MonitorConfig, Signals, TrackerSnapshot, Vector3D } from "@/types"
 
-type deviceOptions = "CPU" | "GPU"
-
+/**
+ * Core processing module for face tracking. Orchestrates MediaPipe face landmarking, 
+ * Models runtime execution for emotions and gaze, and combines them with
+ * detectors for blinks and yawns.
+ *
+ * @export
+ * @class FaceTracker
+ */
 export class FaceTracker{
     private landmarker!: FaceLandmarker
     private latestResult: FaceLandmarkerResult | null = null
@@ -45,9 +51,17 @@ export class FaceTracker{
     private readonly FACE_LOST_THRESHOLD_MS = 2000
     private isFaceLost: boolean = false
 
+    /** @public The hardware backend used for inference (CPU or GPU). */
     public readonly device: deviceOptions
+    /** @public Strategy for gaze estimation. */
     public readonly gazeStrategy: GazeStrategy
     
+    /**
+     * Creates an instance of FaceTracker.
+     *
+     * @constructor
+     * @param {MonitorConfig} config Root configuration object containing all settings 
+     */
     constructor(private config: MonitorConfig){
         this.device = this.config.backend
         this.gazeStrategy = this.config.gazeStrategy
@@ -62,13 +76,21 @@ export class FaceTracker{
         }
     }
 
+    /**
+     * Asynchronously loads WASM binaries. MediaPipe vision tasks and ONNX models.
+     * Must be called before `process()`.
+     * 
+     * @async
+     * @returns {Promise<void>} 
+     * @throws {Error} If WASM loaders or models fail to initialize.
+     */
     async init(): Promise<void> {
         ort.env.wasm.wasmPaths = this.config.assets.wasm.onnx
         
         const visionFileset = await FilesetResolver.forVisionTasks(this.config.assets.wasm.mediapipe)
         
         try {
-            // fix web-worker + mediapipe
+            // Fix web-worker + mediapipe loading issue
             const response = await fetch(visionFileset.wasmLoaderPath)
             eval?.(await response.text())
             delete (visionFileset as any).wasmLoaderPath
@@ -94,10 +116,10 @@ export class FaceTracker{
             throw error
         }
 
-        // initialising emotions model
+        // Initialize emotions model
         await this.emotionsDetector.init()
 
-        // loading gaze models
+        // Load specific gaze models based on the selected strategy
         const modelsToLoad: Promise<void>[] = []
         
         if (this.gazeStrategy === "auto" || this.gazeStrategy === "openvino") {
@@ -111,12 +133,21 @@ export class FaceTracker{
         await Promise.all(modelsToLoad)
     }
 
-    async process(video: TexImageSource){       
+    /**
+     * Processes a single video frame. Detects landmarks, updates trackers (EAR/MAR),
+     * and runs inference for gaze and emotions.
+     * 
+     * @async
+     * @param {TexImageSource} video The raw video frame to process.
+     * @returns {Promise<void>} 
+     */
+    async process(video: TexImageSource): Promise<void> {       
         const now = performance.now()
 
         const result = this.landmarker.detectForVideo(video, now)
         this.latestResult = result
 
+        // Check if the face is lost
         if (!result.faceLandmarks.length || result.faceLandmarks[0] == null || result.faceBlendshapes[0] == null) {
             if (!this.isFaceLost && (now - this.lastFaceDetectedTime > this.FACE_LOST_THRESHOLD_MS)) {
                 this.handleFaceLost()
@@ -133,16 +164,16 @@ export class FaceTracker{
         const bm = result.faceBlendshapes[0].categories // Category
         this.currentHeadAngles = this.getHeadAngles()
 
-        // EAR
+        // Eye Aspect Ratio processing
         const {left: earLeft, right: earRight}= this.earTracker.calculate(lm)
         this.currentEAR = (earLeft + earRight)/2
         this.blinkDetector.update(this.currentEAR)
         
-        // MAR
+        // Mouth Aspect Ratio processing
         this.currentMAR = this.marTracker.calculate(lm)
         this.yawnDetector.update(this.currentMAR)
 
-        // Emotions + Gaze
+        // Asynchronously process Emotions and Gaze
         const emotionsPromise = this.emotionsDetector.update(bm)
 
         let gazePromise = Promise.resolve(null as Vector3D | null)
@@ -170,6 +201,12 @@ export class FaceTracker{
         } 
     }
 
+    /**
+     * Updates the global gaze vector with a low-pass filter to smooth out jitter.
+     *
+     * @private
+     * @param {(Vector3D | Float32Array | null)} newGaze The raw gaze vector from the current frame.
+     */
     private updateGaze(newGaze: Vector3D | Float32Array | null){
         if (!newGaze) return;
 
@@ -185,6 +222,12 @@ export class FaceTracker{
         }
     }
 
+    /**
+     * Extracts Euler head angles (yaw, pitch, roll) in degrees from transformation matrix of the latest mediapipe result.  
+     *
+     * @private
+     * @returns {(Vector3D | null)} Tuple of [yaw, pitch, roll], or null if extraction fails.
+     */
     private getHeadAngles(): Vector3D | null {
         const matrixes = this.latestResult?.facialTransformationMatrixes;
         if (!matrixes || matrixes.length === 0) return null;
@@ -237,7 +280,7 @@ export class FaceTracker{
             : (this.gazeStrategy === "math" ? "MATH" : "OPENVINO")
         
         return {
-            emotion: this.emotionsDetector.current_emotion,
+            emotion: this.emotionsDetector.currentEmotion,
             blink: {
                 status: this.blinkDetector.status,
                 count: this.blinkDetector.blinkCount,

@@ -2,34 +2,67 @@ import * as ort from "onnxruntime-web"
 import type { EmotionConfig, EmotionStatus } from "@/types"
 import { type Category } from "@mediapipe/tasks-vision"
 
+/**
+ * Detects and tracks facial emotions using an ONNX runtime model.
+ * 
+ * @export
+ * @class EmotionsDetector
+ */
 export class EmotionsDetector {
+    /** @private The ONNX inference session. */
     private session!: ort.InferenceSession
 
+    /** @readonly The URL or file path to the ONNX emotion model. */
     readonly modelPath: string
 
-    current_emotion: EmotionStatus = "NEUTRAL"
+    currentEmotion: EmotionStatus = "NEUTRAL"
+    /** @private Circular buffer for storing recent emotions to calculate the mode. */
     private emotionHistory: Array<EmotionStatus>
 
+    // Pre-allocated buffers to prevent garbage collection spikes during updates
     private scoresBuffer = new Float32Array(52)
     private frequencyBuffer: Record<string, number> = {}
     private historySize = 0
     private writeIndex = 0
 
+    /**
+     * Creates an instance of EmotionsDetector.
+     *
+     * @constructor
+     * @param {EmotionConfig} config Configuration for history limits and thresholds.
+     * @param {string} modelPath The path to the `.onnx` emotion model file. 
+     */
     constructor(private config: EmotionConfig, modelPath: string) {
         this.emotionHistory = new Array<EmotionStatus>(this.config.historyLimit)
         this.modelPath = modelPath
     }
 
+    /**
+     * Initializes the ONNX runtime session and load the model into memory.
+     * Must be called before `update()`.
+     * 
+     * @async
+     * @returns {Promise<void>}
+     * @throws {Error} If the ONNX model fails to load.
+     */
     async init(): Promise<void> {
         try {
             this.session = await ort.InferenceSession.create(this.modelPath)
-            console.log("✅ ONNX Emotions Model loaded:");
+            console.log("✅ ONNX Emotions Model loaded")
         } catch (error) {
             console.error("Failed to load ONNX model:", error);
             throw error;
         }
     }
 
+    /**
+     * Processes the current facial blendshapes, predicts the emotion, and updates 
+     * the smoothed `currentEmotion` state.
+     *
+     * @async
+     * @param {Category[]} blendshapes Array of exactly 52 facial blendshapes from MediaPipe.
+     * @returns {Promise<void>} 
+     */
     async update(blendshapes: Category[]): Promise<void> {
         if (!blendshapes.length) return
 
@@ -40,6 +73,13 @@ export class EmotionsDetector {
         this.applyEmotionSmoothing(rawEmotion)
     }
 
+    /**
+     * Applies a moving-mode filter to smooth out sudden changes in emotion detection.
+     * Updates the `currentEmotion` property.
+     *
+     * @private
+     * @param {EmotionStatus} newEmotion The new raw predicted emotion from current frame.
+     */
     private applyEmotionSmoothing(newEmotion: EmotionStatus){
 
         this.emotionHistory[this.writeIndex] = newEmotion
@@ -69,9 +109,17 @@ export class EmotionsDetector {
             }
         }
 
-        this.current_emotion = dominantEmotion
+        this.currentEmotion = dominantEmotion
     }
 
+    /**
+     * Runs inference on the ONNX model using the provided blendshape scores.
+     *
+     * @private
+     * @async
+     * @param {Float32Array} scores A flat array of 52 blendshape scores.
+     * @returns {Promise<EmotionStatus>} The predicted emotion, defaulting to "NEUTRAL" on failure.
+     */
     private async predictCurrentEmotion(scores: Float32Array): Promise<EmotionStatus> {
         try {
             if (scores.length !== 52){

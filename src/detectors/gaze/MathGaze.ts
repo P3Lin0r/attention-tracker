@@ -3,10 +3,27 @@ import { BaseGazeDetector } from "@detectors/gaze/BaseGaze"
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision"
 import type { Vector3D } from "@/types"
 
+/**
+ * Mathematical lightweight, neural-network-free gaze detector strategy.
+ * 
+ * Calculates gaze direction using pure geometry by evaluating the position 
+ * of the iris relative to the eye corners.
+ * 
+ * @export
+ * @class MathGazeDetector
+ * @extends {BaseGazeDetector}
+ */
 export class MathGazeDetector extends BaseGazeDetector {
     private sx: number
     private sy: number
     
+    /**
+     * Creates an instance of MathGazeDetector.
+     *
+     * @constructor
+     * @param {number} [sensitivityX=1.3] Horizontal gaze multiplier to amplify eye movements. 
+     * @param {number} [sensitivityY=2] Vertical gaze multiplier to amplify eye movements.
+     */
     constructor(sensitivityX=1.3, sensitivityY=2){
         super()
         this.sx = sensitivityX
@@ -30,6 +47,13 @@ export class MathGazeDetector extends BaseGazeDetector {
         return [gx/len, gy/len, gz/len] 
     }
 
+    /**
+     * Uses the geometric center of the eye and the iris position to determine yaw and pitch.
+     *
+     * @private
+     * @param {NormalizedLandmark[]} landmarks The full array of facial landmarks.
+     * @returns {[number, number]} A tuple containing the calculated [yaw, pitch] in radians.
+     */
     private computeYawPitchFromLandmarks(landmarks: NormalizedLandmark[]): [number, number] {
         const eyesData = [
             {'iris': landmarks[468]!, 'o': landmarks[33]!, 'i': landmarks[133]!},

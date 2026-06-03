@@ -1,3 +1,4 @@
+// export const FACE_MODEL_PATH = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
 import type { 
     MonitorConfig
 } from "@/types"
@@ -6,6 +7,10 @@ import {dependencies} from "../../package.json"
 const MEDIAPIPE_VERSION = dependencies["@mediapipe/tasks-vision"].replace("^", "")
 const ONNX_VERSION = dependencies["onnxruntime-web"].replace("^", "")
 
+/**
+ * The default configuration fallback for the AttentionMonitor.
+ * Values can be partially overridden when initializing the library.
+ */
 export const DEFAULT_CONFIG: MonitorConfig = {
     assets: {
         wasm: {
@@ -56,10 +61,27 @@ export const DEFAULT_CONFIG: MonitorConfig = {
     }
 }
 
+/**
+ * Utility type to allow deeply nested partial objects.
+ * Used to accept incomplete user configurations before merging with defaults.
+ *
+ * @export
+ * @template T 
+ */
 export type DeepPartial<T> = T extends object ? {
     [P in keyof T]?: DeepPartial<T[P]>
 }: T
 
+/**
+ * Recursively merges a partial source object into a target object.
+ * Arrays and primitives are overwritten; nested objects are merged deeply.
+ *
+ * @export
+ * @template {Record<string, any>} T 
+ * @param {T} target The base object
+ * @param {DeepPartial<T>} source The user-provided override object.
+ * @returns {T} A new object containing the merged result.
+ */
 export function deepMerge<T extends Record<string, any>>(target: T, source: DeepPartial<T>): T {
     const output = { ... target }
     if (isObject(target) && isObject(source)){

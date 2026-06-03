@@ -9,7 +9,14 @@ import type {
 } from "@/types";
 import { HistoryBuffer } from "@/core/history/History";
 
-
+/**
+ * Aggregates all tracking and calibration data to an `attention score` and determines 
+ * the user's high-level state `(NORMAL, DISTRACTED, DROWSY, MICROSLEEP, ADHD)`.
+ * Combines gaze variance, blinks (PERCLOS), yawning, and emotional states to calculate penalties.
+ * 
+ * @export
+ * @class AttentionEngine
+ */
 export class AttentionEngine {
     private yawHistory: HistoryBuffer
     private pitchHistory: HistoryBuffer
@@ -20,11 +27,25 @@ export class AttentionEngine {
     private targetStatus: AttentionStatus = "NORMAL"
     private statusHoldStartTime: number | null = null
 
+    /**
+     * Creates an instance of AttentionEngine.
+     *
+     * @constructor
+     * @param {EngineConfig} config Configuration mapping penalty weights and time windows.
+     */
     constructor(private config: EngineConfig){
         this.yawHistory = new HistoryBuffer(this.config.yawTimeWindow) 
         this.pitchHistory = new HistoryBuffer(this.config.pitchTimeWindow) 
     }
 
+    /**
+     * Analyzes incoming frame data and updates the attention score and status.
+     *
+     * @param {TrackerSnapshot} snapshot Geometric data (gaze, head angles) from the frame.
+     * @param {CalibrationState} calibrationState The current calibration baseline and states.
+     * @param {Signals} signals High-level semantic signals (emotions, blink status).
+     * @returns {{ status: AttentionStatus, score: number, details: AttentionDetails }} The analyzed result.
+     */
     analyze(
         snapshot: TrackerSnapshot,
         calibrationState: CalibrationState,
@@ -40,7 +61,9 @@ export class AttentionEngine {
             }
         }
 
+        // ==============================
         // HARD OVERRIDES
+        // ==============================
         if (signals.blink.status == "MICROSLEEP"){
             this.score = 0
             this.applyStatusImmediately("MICROSLEEP")
@@ -61,7 +84,9 @@ export class AttentionEngine {
             return this.buildResult(details)
         }
 
-        // SOFT SCORE
+        // ==============================
+        // SOFT SCORE CALCULATION
+        // ==============================
         if (snapshot.gaze && calibrationState.isCalibrated){
             const [gx, gy, gz] = snapshot.gaze
             const yaw = rad2degScalar(Math.atan2(gx, Math.abs(gz) + 1e-6))
@@ -77,6 +102,7 @@ export class AttentionEngine {
             const pitchPenalty = Math.max(0, (Math.abs(pitchDiff) - 10) / 20)
             details.penalties.gaze = Math.min(1, yawPenalty + pitchPenalty)
 
+            // Detect high variance (jittery gaze without losing focus entirely)
             if (this.yawHistory.isFull && this.yawHistory.length >= 15){
                 const yawStd = this.yawHistory.std()
                 const pitchStd = this.pitchHistory.std()
@@ -115,12 +141,25 @@ export class AttentionEngine {
         return this.buildResult(details)
     }
 
+    /**
+     * Bypasses the debouncer to apply critical statuses immediately.
+     *
+     * @private
+     * @param {AttentionStatus} status The status to force.
+     */
     private applyStatusImmediately(status: AttentionStatus){
         this.status = status
         this.targetStatus = status
         this.statusHoldStartTime = null
     }
 
+    /**
+     * Converts the score into a categorical status, utilizing a time-based 
+     * debounce to prevent status flickering (e.g., dropping to Distracted for a millisecond).
+     *
+     * @private
+     * @param {boolean} isADHD True if high variance/fidgeting was detected.
+     */
     private updateStatus(isADHD: boolean){
         let calculatedTarget: AttentionStatus = "NORMAL"
         
@@ -131,20 +170,25 @@ export class AttentionEngine {
         } else if (this.score > 0.25) {
             calculatedTarget = "DROWSY"
         } else {
-            calculatedTarget = "MICROSLEEP"
+            // Note: If FaceLost occurs, score drops to 0, which transitions to MICROSLEEP here.
+            // This could create an artifact transition chain (MICROSLEEP -> DROWSY -> NORMAL) upon recovery.
+            calculatedTarget = "MICROSLEEP" 
         }
-        
+
         const now = performance.now()
         if (calculatedTarget === this.targetStatus){
+            // If the target has been held for the requisite 'timeToConfirm', lock it in
             if (this.statusHoldStartTime !== null && (now - this.statusHoldStartTime >= this.config.timeToConfirm)){
                 this.status = this.targetStatus
             }
         } else {
+            // Target changed, start a new confirmation timer
             this.targetStatus = calculatedTarget
             this.statusHoldStartTime = now
         }
     }
 
+    /** Resets the engine's histories and scores to their default state. */
     reset(){
         this.yawHistory.clear()
         this.pitchHistory.clear()

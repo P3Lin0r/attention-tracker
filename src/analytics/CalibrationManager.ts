@@ -3,6 +3,14 @@ import type { CalibrationConfig, TrackerSnapshot } from "@/types"
 import { clamp, rad2degScalar } from "@/utils/helpers"
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision"
 
+/**
+ * Manages the dynamic baseline calibration of the user's face and gaze position.
+ * It tracks physical distance (via face area), head center, and gaze angles.
+ * Triggers recalibration if an anomaly (like the user leaning back significantly) persists.
+ *
+ * @export
+ * @class CalibrationManager
+ */
 export class CalibrationManager {
     private recentAreas: HistoryBuffer
     private recentYaws: HistoryBuffer
@@ -20,6 +28,12 @@ export class CalibrationManager {
     private anomalyAccumulatorMs = 0
     private lastUpdateTime = 0
 
+    /**
+     * Creates an instance of CalibrationManager.
+     *
+     * @constructor
+     * @param {CalibrationConfig} config Configuration thresholds and gathering sizes.
+     */
     constructor(private config: CalibrationConfig) {
         this.recentAreas = new HistoryBuffer(this.config.gatheringSize)
         this.recentYaws = new HistoryBuffer(this.config.gatheringSize)
@@ -28,6 +42,14 @@ export class CalibrationManager {
         this.recentCy = new HistoryBuffer(this.config.gatheringSize)
     }
 
+    /**
+     * Description placeholder Process a new tracker data to either build the initial calibration baseline or 
+     * track anomalies that require a recalibration event.
+     * 
+     * @remarks Implements a "leaky bucket" algorithm for anomaly detection. If the face shifts significantly,
+     * time is added to `anomalyAccumulatorMs`. If the face returns to normal, the accumulator cools down.
+     * @param {TrackerSnapshot} data The current frame's tracking data.
+     */
     update(data: TrackerSnapshot){
         if (!data.landmarks || !data.gaze) return
 
@@ -63,7 +85,7 @@ export class CalibrationManager {
         this.recentCy.push(cy)
 
         if (!this.isCalibrated){
-            if (this.recentAreas.isFull && this.recentAreas.length >= 10){ 
+            if (this.recentAreas.isFull && this.recentAreas.length >= 10) {
                 this.applyBaseline()
             }
             return
@@ -79,8 +101,10 @@ export class CalibrationManager {
         this.lastUpdateTime = now
 
         if (isAnomaly){
+            // Accumulate milliseconds spent in an anomalous state
             this.anomalyAccumulatorMs += dt
         } else {
+            // Gradually "cool down" the timer if the user returns to baseline
             this.anomalyAccumulatorMs = Math.max(0, this.anomalyAccumulatorMs - dt)
         }
 
@@ -89,7 +113,12 @@ export class CalibrationManager {
             this.anomalyAccumulatorMs = 0
         }
     }
-
+    
+    /**
+     * Calculates and sets the new baseline using the median of the history buffers.
+     * Using the median prevents outliers (like a sudden head jerk) from skewing the baseline.
+     * @private
+     */
     private applyBaseline(){
         this.baseArea = this.recentAreas.median()
         this.baseYaw = this.recentYaws.median()
@@ -98,15 +127,9 @@ export class CalibrationManager {
         this.baseCy = this.recentCy.median()
 
         this.isCalibrated = true
-        
-        console.log("New baseline:",{
-            area: this.baseArea,
-            yaw: this.baseYaw,
-            pitch: this.basePitch,
-            center: { x: this.baseCx, y: this.baseCy}
-        })
     }
 
+    /** Clears all history buffers and calibration states. */
     reset(): void {
         this.recentAreas.clear()
         this.recentPitches.clear()

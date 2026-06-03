@@ -8,12 +8,33 @@ import TrackerWorker from "@workers/tracker.worker?worker&inline"
 import { EventEmitter } from "@/api/EventEmitter";
 import { FaceTracker } from "@/core/FaceTracker";
 
+/**
+ * Valid event signatures for the {@link AttentionMonitor} 
+ * 
+ * @example
+ * monitor.on('attention', (result) => {
+ *    console.log('Current result:', result.score)
+ * })
+*/
 type MonitorEvents = {
+    /** Ensures the continuous reporting of analysis results while running. */
     "attention": [AttentionResult]
+
+    /** Fired when initialization completes and models are loaded. */
     "ready": []
+
+    /** Triggers when an internal error occurs. */
     "error": [Error]
 }
 
+/**
+ * The main public entry point for the library. Manages the lifecycle of tracking, 
+ * orchestrates Web Workers or local processing, and emits attention events.
+ *
+ * @export
+ * @class AttentionMonitor
+ * @extends {EventEmitter<MonitorEvents>}
+ */
 export class AttentionMonitor extends EventEmitter<MonitorEvents>{
     private config: MonitorConfig 
 
@@ -29,6 +50,13 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
 
     private wasFaceLost: boolean = false
 
+    /**
+     * Private constructor. Use `AttentionMonitor.create()` for instantiation.
+     *
+     * @constructor
+     * @private
+     * @param {MonitorConfig} config Fully merged configuration object.
+     */
     private constructor(config: MonitorConfig) {
         super()
         this.config = config
@@ -36,6 +64,16 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
         this.engine = new AttentionEngine(this.config.settings.engine)
     }
 
+    /**
+     * Factory method to create and initialize an AttentionMonitor instance.
+     * Merges user configuration with default settings.
+     *
+     * @public
+     * @static
+     * @async
+     * @param {DeepPartial<MonitorConfig>} [userConfig={}] Overrides for the default configuration.
+     * @returns {Promise<AttentionMonitor>} A fully initialized monitor instance.
+     */
     public static async create(userConfig: DeepPartial<MonitorConfig> = {}): Promise<AttentionMonitor> {
         const finalConfig = deepMerge<MonitorConfig>(DEFAULT_CONFIG, userConfig)
         const monitor = new AttentionMonitor(finalConfig)
@@ -44,6 +82,13 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
         return monitor
     }
 
+    /**
+     * Bootstraps the monitor environment based on the configuration (Worker or Local Main thread).
+     *
+     * @private
+     * @async
+     * @returns {Promise<void>} 
+     */
     private async init(): Promise<void> {
         this.normalizeAssetPaths()
 
@@ -54,6 +99,12 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
         }
     }
 
+    /**
+     * Ensures all provided asset paths are converted to absolute URLs 
+     * to prevent cross-origin or resolution errors inside Web Workers.
+     * 
+     * @private
+     */
     private normalizeAssetPaths(): void {
         if (!this.config.assets) return;
         
@@ -74,12 +125,18 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
         }
     }
 
+    /**
+     * Initialize tracker off-thread via a Web Worker. 
+     *
+     * @private
+     * @async
+     * @returns {Promise<void>} 
+     */
     private async initWorker(): Promise<void> {
         return new Promise((resolve, reject) => {
             try {
                 this.worker = new TrackerWorker();
                 
-                // Listen
                 this.worker.onmessage = async (e) => {
                     const {type, payload } = e.data
                     
@@ -98,7 +155,6 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
                     this.emit("error", new Error(error.message));
                 }
 
-                // Sending
                 this.worker.postMessage({type: "INIT", payload: { config: this.config }})
 
             } catch (error) {
@@ -107,6 +163,13 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
         })
     }
 
+    /**
+     * Initializes the tracker on the main thread.
+     *
+     * @private
+     * @async
+     * @returns {Promise<void>} 
+     */
     private async initLocal(): Promise<void> {
         try {
             this.localTracker = new FaceTracker(this.config)
@@ -118,8 +181,15 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
         }
     }
 
+    /**
+     * Passes tracking results through the calibration manager and attention engine, 
+     * then emits the assembled data to the consumer.
+     *
+     * @private
+     * @param {TrackerSnapshot} snapshot The geometric tracking output.
+     * @param {Signals} signals Raw emotional and behavioral signals.
+     */
     private handleResult(snapshot: TrackerSnapshot, signals: Signals) {
-
         if (snapshot.isFaceLost){
             if (!this.wasFaceLost){
                 this.calibration.reset()
@@ -171,15 +241,24 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
         }
     }
 
-    public async start(videoElement: TexImageSource) {
+    /**
+     * Starts the processing loop, grabbing frames from the provided video source.
+     *
+     * @public
+     * @async
+     * @param {TexImageSource} videoElement The HTML video, canvas, or image element to track.
+     * @returns {Promise<void>} 
+     */
+    public async start(videoElement: TexImageSource): Promise<void> {
         if (this.isRunning) return
 
         this.videoElement = videoElement
         this.isRunning = true
         this.processNextFrame()
     }
-
-    public stop() {
+    
+    /** Stops the processing loop @public */
+    public stop(): void {
         this.isRunning = false
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId)
@@ -187,7 +266,15 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
         }
     }
 
-    private async processNextFrame(){
+    /**
+     * The core recursive frame-grab loop. Converts the current frame to an ImageBitmap
+     * for high-performance, transport to the Web Worker (if enabled) or processes it locally.
+     *
+     * @private
+     * @async
+     * @returns {Promise<void>} 
+     */
+    private async processNextFrame(): Promise<void> {
         if (!this.isRunning || !this.videoElement) return
 
         try {
@@ -215,5 +302,38 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
                 this.animationFrameId = requestAnimationFrame(() => this.processNextFrame());
             }
         }
+    }
+    
+    /**
+     * Subscribes to monitor events.
+     *
+     * @public
+     * @param {"attention"} event Event `attention`. Ensures the continuous reporting of analysis results while running.
+     * @param {(result: AttentionResult) => void} fn Callback with results ({@link AttentionResult}).
+     * @returns {this} 
+     */
+    public override on(event: "attention", fn: (result: AttentionResult) => void): this;
+    
+    /**
+     * Subscribes to monitor events.
+     *
+     * @public
+     * @param {"ready"} event Event `ready`. Fired when initialization completes and models are loaded.
+     * @param {() => void} fn Callback triggered on completion.
+     * @returns {this} 
+     */
+    public override on(event: "ready", fn: () => void): this;
+    
+    /**
+     * Subscribes to monitor events.
+     *
+     * @public
+     * @param {"error"} event Event `error`. Triggers when an internal error occurs.
+     * @param {(error: Error) => void} fn Callback with the error object.
+     * @returns {this} 
+     */
+    public override on(event: "error", fn: (error: Error) => void): this;
+    public override on<K extends keyof MonitorEvents>(event: K, fn: (...args: MonitorEvents[K]) => void): this {
+        return super.on(event, fn as any);
     }
 }

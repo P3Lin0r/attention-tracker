@@ -3,14 +3,27 @@ import { BaseGazeDetector } from "@detectors/gaze/BaseGaze";
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision";
 import * as ort from "onnxruntime-web"
 
+/**
+ * Neural network highly accurate gaze detector using an OpenVINO gaze-estimation-adas-0002 ONNX model.
+ * 
+ * Extracts visual crops of the user's eyes from the raw frame and processes 
+ * them with head pose angles to determine a robust 3D gaze vector.
+ *
+ * @export
+ * @class OpenVINOGazeDetector
+ * @extends {BaseGazeDetector}
+ */
 export class OpenVINOGazeDetector extends BaseGazeDetector {
     private session!: ort.InferenceSession
-    
+
+    /** @readonly The URL or file path to the OpenVINO ONNX gaze model.*/
     readonly modelPath: string
     
+    // Dedicated offscreen canvas for rendering eye crops without affecting the DOM
     private cropCanvas: OffscreenCanvas
     private cropCtx: OffscreenCanvasRenderingContext2D
 
+    // Pre-allocated buffers to prevent memory allocation during frame-by-frame processing
     private chwBuffer = new Float32Array(1 * 3 * 60 * 60)
     private headPoseBuffer = new Float32Array(3)
 
@@ -21,6 +34,12 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
         { x: 0, y: 0 }
     ]
     
+    /**
+     * Creates an instance of OpenVINOGazeDetector.
+     *
+     * @constructor
+     * @param {string} modelPath The path to the `.onnx` gaze model.
+     */
     constructor(modelPath: string) {
         super()
         this.modelPath = modelPath
@@ -32,9 +51,7 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
     async load(): Promise<void> {
         try {
             this.session = await ort.InferenceSession.create(this.modelPath, {graphOptimizationLevel: "disabled"})
-            console.log("✅ ONNX openVINO Gaze Model loaded:");
-            console.log("Inputs:", this.session.inputNames);
-            console.log("Outputs:", this.session.outputNames);
+            console.log("✅ ONNX openVINO Gaze Model loaded")
         } catch (error) {
             console.error("Failed to load ONNX model:", error);
             throw error;
@@ -103,6 +120,18 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
         }
     }
 
+    /**
+     * Calculates the bounding box for an eye, crops it from the frame, draws it to the
+     * offscreen canvas, and converts it into a tensor.
+     *
+     * @private
+     * @param {TexImageSource} frame The source image/video frame.
+     * @param {number} frameW Original fame width.
+     * @param {number} frameH Original fame height.
+     * @param {NormalizedLandmark[]} landmarks Full Array of facial landmarks.
+     * @param {("left" | "right")} eyeType Witch eye to process. 
+     * @returns {(ort.Tensor | null)} The preprocessed image tensor, or null if the crop falls outside bounds.
+     */
     private getSquareEyeCropAndPreprocess(
         frame: TexImageSource, 
         frameW: number, 
@@ -160,9 +189,17 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
         return this.imageDataToTensorCHW(imageData)
     }
 
+    /**
+     * Converts a flat RGBA ImageData array into a CHW (Channel, Height, Width) tensor 
+     * required by model. Modifies the pre-allocated `chwBuffer`.
+     *
+     * @private
+     * @param {ImageData} imageData The raw image data from the canvas context.
+     * @returns {ort.Tensor} A 4D tensor with shape [1, 3, 60, 60].
+     */
     private imageDataToTensorCHW(imageData: ImageData): ort.Tensor {
         const { data } = imageData
-        const channelPixels = 3600
+        const channelPixels = 3600 // 60x60
 
         for (let i = 0; i < channelPixels; i++) {
             const rgbaIdx = i * 4
@@ -177,6 +214,13 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
         return new ort.Tensor("float32", this.chwBuffer, [1, 3, 60, 60])
     }
 
+    /**
+     * Safely determines the true size of various frame source types.
+     *
+     * @private
+     * @param {TexImageSource} frame The input media frame.
+     * @returns {{ width: number, height: number }} The integer size of the source.
+     */
     private getFrameDimensions(frame: TexImageSource): { width: number, height: number } {
         if (frame instanceof ImageBitmap) {
             return { width: frame.width, height: frame.height}

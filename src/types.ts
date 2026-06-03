@@ -1,12 +1,29 @@
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision"
 
-export type GazeStrategy = "auto" | "openvino" | "math"
+import type { AttentionMonitor } from "./api/AttentionMonitor" 
+import type { BlinkDetector } from "./detectors/BlinkDetector"
+import type { YawnDetector } from "./detectors/YawnDetector"
+import type { EmotionsDetector } from "./detectors/EmotionsDetector"
+import type { CalibrationManager } from "./analytics/CalibrationManager"
+import type { AttentionEngine } from "./analytics/AttentionEngine"
+import { DEFAULT_CONFIG } from "@config/defaults"
+
+/** Represents a point or direction in 3D space [x, y, z]. */
 export type Vector3D = [number, number, number]
+
+/** The high-level semantic status of the user's attention. */
 export type AttentionStatus = "DISTRACTED" | "NORMAL" | "DROWSY" | "MICROSLEEP" | "ADHD" | "NOT_DETECTED"
+
+/** Detected facial emotion. */
 export type EmotionStatus = "NEUTRAL" | "HAPPY" | "SAD" | "THINKING" | "FOCUSED"
+
+/** Represents the state of the eyes. */
 export type BlinkStatus = "NORMAL" | "DROWSY" | "MICROSLEEP"
+
+/** Represents the state of mouth opening. */
 export type YawnStatus = "NORMAL" | "YAWNING"
 
+/** Raw geometric snapshot of a single frame. */
 export type TrackerSnapshot = {
     isFaceLost: boolean
     landmarks: NormalizedLandmark[] | null
@@ -14,6 +31,7 @@ export type TrackerSnapshot = {
     headAngles?: Vector3D
 }
 
+/** The established user calibration baseline. */
 export type CalibrationState = {
     yaw: number;
     pitch: number;
@@ -23,6 +41,7 @@ export type CalibrationState = {
     isCalibrated: boolean;
 }
 
+/** Processed semantic features obtained from tracking. */
 export type Signals = {
     emotion: EmotionStatus
     blink: {
@@ -47,6 +66,7 @@ export type Signals = {
     }
 }
 
+/** Explanatory context detailing why a certain attention score was assigned. */
 export type AttentionDetails = {
     penalties: {
         gaze: number;
@@ -61,6 +81,7 @@ export type AttentionDetails = {
     }
 }
 
+/** The final output payload. */
 export type AttentionResult = {
     status: AttentionStatus;
     score: number;
@@ -71,36 +92,98 @@ export type AttentionResult = {
 }
 
 
-// CONFIG
+// ===================================
+// CONFIGURATION INTERFACES
+// ===================================
+
+/**
+ * Configuration parameters for the blink detection logic [{@link BlinkDetector}]
+ *
+ * @export
+ * @interface BlinkConfig
+ */
 export interface BlinkConfig {
+    /** Multiplier applied to the median resting EAR to determine the dynamic closure threshold. */
     thresholdSensitivity: number
+    /** Maximum duration (in seconds) for a closure to be counted as a normal blink. */
     blinkDurationLimit: number
+    /** Minimum duration (in seconds) of continuous eye closure to trigger a MICROSLEEP status. */
     microsleepLimit: number
+    /** The threshold (0.0 to 1.0) of PERCLOS (Percentage of Eye Closure) required to trigger a DROWSY status. */
     perclosDrowsyThreshold: number
+    /** 
+     * The duration (in seconds) of the EAR history buffer used to calculate the dynamic resting baseline. 
+     * A longer window provides a more stable median but adapts slower to changes in head posture or distance.
+     */
     earTimeWindow: number
+    /**
+     * The duration (in seconds) of the sliding window used to compute the PERCLOS (Percentage of Eye Closure) score. 
+     * Defines how far back in time the detector looks to evaluate the user's drowsiness level.
+     */
     perclosTimeWindow: number
 }
 
+/**
+ * Configuration parameters for the yawn detection logic [{@link YawnDetector}]
+ *
+ * @export
+ * @interface YawnConfig
+ */
 export interface YawnConfig {
+    /** Multiplier applied to the median resting MAR to determine the dynamic open-mouth threshold. */
     thresholdSensitivity: number
+    /** Minimum duration (in seconds) of continuous mouth opening to be classified as a yawn. */
     minYawnDuration: number
+    /** Maximum duration (in seconds) to consider a movement a yawn (filters out continuous talking/shouting). */
     maxYawnDuration: number
+    /**
+     * The duration (in seconds) of the MAR history buffer to compute the median resting mouth state. 
+     * This baseline is crucial for adapting the yawn threshold dynamically, compensating for distance and micro-movements.
+     */
     marTimeWindow: number
 }
 
+/**
+ * Configuration parameters for the emotions detection logic [{@link EmotionsDetector}]
+ *
+ * @export
+ * @interface EmotionConfig
+ */
 export interface EmotionConfig {
+    /** Number of {@link EmotionStatus} values collected from recent frames to buffer for emotion smoothing. */
     historyLimit: number
 }
 
+/**
+ * Configuration parameters for the calibration logic [{@link CalibrationManager}]
+ *
+ * @export
+ * @interface CalibrationConfig
+ */
 export interface CalibrationConfig {
+    /** Time window (in seconds) to gather data before calculating a median baseline. */
     gatheringSize: number
+    /** Maximum allowed time (in milliseconds) the user can stay in an anomalous state before a forced recalibration triggers. */
     maxAnomalyMs: number
 }
 
+/**
+ * Configuration parameters for the attention engine logic [{@link AttentionEngine}]
+ *
+ * @export
+ * @interface EngineConfig
+ */
 export interface EngineConfig {
+    /** Time (in milliseconds) a new status must be maintained before it is officially applied (debouncing). */
     timeToConfirm: number
+    /** Time window (in seconds) to calculate standard deviation for horizontal head movements (yaw). */
     yawTimeWindow: number
+    /** Time window (in seconds) to calculate standard deviation for vertical head movements (pitch). */
     pitchTimeWindow: number
+    /** 
+     * Penalty weights applied to the attention score calculation. 
+     * Modifies how perclos(percentage of eye closure), yawns, and gaze variance affect the final score.
+     */
     weights: {
         gaze: number
         perclos: number 
@@ -108,28 +191,104 @@ export interface EngineConfig {
     }
 }
 
+/**
+ * File paths or URLs to required WebAssembly files and Neural Network models.
+ *
+ * @export
+ * @interface AssetPaths
+ */
 export interface AssetPaths {
     wasm: {
+        /** Path to MediaPipe vision tasks WASM directory. */
         mediapipe: string
+        /** Path to ONNX Runtime Web WASM directory. */
         onnx: string
     }
     models: {
+        /** Path to the MediaPipe face landmarker `.task` file. */
         face: string
+        /** Path to the ONNX emotion classification model. */
         emotion: string
+        /** Path to the OpenVINO ONNX `gaze-estimation-adas-0002.onnx` gaze estimation model. */
         gazeOV: string
     }
 }
 
+/** The hardware backend used for inference */
+export type deviceOptions = "CPU" | "GPU"
+/** Defines the strategy used to compute the gaze vector. */
+export type GazeStrategy = "auto" | "openvino" | "math"
+
+/**
+ * Global configuration for the {@link AttentionMonitor}.
+ * Defines data processing settings, resources used, and monitoring strategies.
+ * 
+ * The default values of config is in {@link DEFAULT_CONFIG}
+ * @export
+ * @interface MonitorConfig
+ * @example
+ * const config: MonitorConfig = {
+ *    worker: true,
+ *    backend: 'GPU',
+ *    gazeStrategy: 'auto',
+ *    // ... other fields
+ * }
+ */
 export interface MonitorConfig {
+    /**
+     * Paths to required WASM binaries and models. 
+     * See {@link AssetPaths} for details.
+     */
     assets: AssetPaths
+
+    /**
+     * If true, runs the tracking pipeline off the main thread in a Web Worker. 
+     * Highly recommended to prevent UI blocking.
+     */
     worker: boolean
-    backend: "GPU" | "CPU"
+
+    /**
+     * The hardware backend for ONNX/MediaPipe inference.
+     * See {@link deviceOptions}. 
+     */
+    backend: deviceOptions
+
+    /** 
+     * The strategy used to compute the gaze vector. 
+     * See {@link GazeStrategy}. 
+     */
     gazeStrategy: GazeStrategy
+
+    /** Module-specific tuning parameters and thresholds. */
     settings: {
+        /**
+         * Configuration for blink and microsleep detection.
+         * See {@link BlinkConfig} for available thresholds and time windows.
+         */
         blink: BlinkConfig
+
+        /**
+         * Configuration for yawn detection and MAR (Mouth Aspect Ratio) processing.
+         * See {@link YawnConfig}.
+         */
         yawn: YawnConfig
+
+        /**
+         * Configuration for emotion classification smoothing.
+         * See {@link EmotionConfig}.
+         */
         emotion: EmotionConfig
+
+        /**
+         * Configuration for establishing the user's neutral baseline.
+         * See {@link CalibrationConfig}.
+         */
         calibration: CalibrationConfig
+
+        /**
+         * Configuration for the core attention scoring engine and penalty weights.
+         * See {@link EngineConfig}.
+         */
         engine: EngineConfig
     }
 }
