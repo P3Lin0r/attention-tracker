@@ -247,4 +247,15 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
         }
         return { width: 0, height: 0 };
     }
+
+    /** Release the inference session and the underlying resources of onnx model */
+    destroy(): void {
+        if (this.session){
+            try {
+                this.session.release()
+            } catch (error) {
+                console.error("Failed to release ONNX Gaze model", error)
+            }
+        }
+    }
 }

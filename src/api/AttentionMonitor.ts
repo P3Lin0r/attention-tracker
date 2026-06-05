@@ -257,13 +257,47 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
         this.processNextFrame()
     }
     
-    /** Stops the processing loop @public */
+    /**
+     * Stops the processing loop. 
+     * The resources remain in memory; you can call start() again.
+     * @public 
+     */
     public stop(): void {
         this.isRunning = false
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId)
             this.animationFrameId = null
         }
+        if(this.localTracker) {
+            this.localTracker.clear()
+        }
+        this.calibration.reset()
+        this.engine.reset()
+    }
+    
+    /**
+     * Completely destroys the monitor, unloads models from memory, 
+     * terminates workers and unsubscribes all events.
+     * Once this method has been called, the instance can no longer be used.
+     * @public
+     */
+    public destroy(): void {
+        this.stop()
+
+        if (this.config.worker && this.worker){
+            this.worker.postMessage({type: "DESTROY"})
+
+            setTimeout(()=>{
+                this.worker?.terminate()
+                this.worker = null
+            }, 50)
+        } else if (this.localTracker){
+            this.localTracker.destroy()
+            this.localTracker = null
+        }
+
+        this.videoElement = null
+        this.removeAllListeners()
     }
 
     /**

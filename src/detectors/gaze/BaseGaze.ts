@@ -37,6 +37,13 @@ export abstract class BaseGazeDetector {
         frame?: TexImageSource | null,
         head_angles?: Vector3D
     ): Promise<Vector3D | null>
+
+    /**
+     * Safely remove from memory
+     *
+     * @abstract
+     */
+    abstract destroy() : void
 }
 
 /**

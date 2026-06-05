@@ -31,4 +31,13 @@ self.onmessage = async (e: MessageEvent) => {
 
         imageBitmap.close()
     }
+
+    if (type == "DESTROY") {
+        if (tracker) {
+            tracker.destroy()
+        }
+
+        self.postMessage({type: "DESTROY_DONE"})
+        self.close()
+    }
 }

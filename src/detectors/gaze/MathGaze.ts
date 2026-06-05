@@ -95,4 +95,6 @@ export class MathGazeDetector extends BaseGazeDetector {
         
         return [deg2radScalar(yawDeg), deg2radScalar(pitchDeg)]
     }
+
+    destroy(): void { }
 }

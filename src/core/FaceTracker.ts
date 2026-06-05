@@ -262,7 +262,26 @@ export class FaceTracker{
     private handleFaceFound(): void {
         this.isFaceLost = false
     }
+    
+    clear(): void {
+        this.blinkDetector.reset()
+        this.yawnDetector.reset()
+        this.perfMonitor.reset()
+    }
 
+    /** Release resourses of MediaPipe and ONNX */
+    destroy(): void {
+        this.clear()
+        if (this.landmarker) {
+            this.landmarker.close()
+        }
+
+        this.emotionsDetector.destroy()
+
+        Object.values(this.gazeStrategies).forEach(strategy => {
+            strategy.destroy()
+        })
+    }
 
     getSnapshot(): TrackerSnapshot {
         return {
