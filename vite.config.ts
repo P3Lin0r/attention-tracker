@@ -1,5 +1,8 @@
 import {defineConfig} from "vite"
 import path from "path"
+import pkg from "./package.json"
+
+const cleanVersion = (version: string) => version.replace(/[\^~]/g, '');
 
 export default defineConfig({
     root: "./demo",
@@ -15,6 +18,11 @@ export default defineConfig({
             "@workers": path.resolve(__dirname, "./src/workers"),
             "@api": path.resolve(__dirname, "./src/api")
         }
+    },
+    define: {
+        global: "globalThis",
+        __MEDIAPIPE_VERSION__: JSON.stringify(cleanVersion(pkg.dependencies["@mediapipe/tasks-vision"])),
+        __ONNX_VERSION__: JSON.stringify(cleanVersion(pkg.dependencies["onnxruntime-web"]))
     },
     server: {
         host: true,

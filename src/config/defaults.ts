@@ -1,11 +1,6 @@
-// export const FACE_MODEL_PATH = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
 import type { 
     MonitorConfig
 } from "@/types"
-
-import {dependencies} from "../../package.json"
-const MEDIAPIPE_VERSION = dependencies["@mediapipe/tasks-vision"].replace("^", "")
-const ONNX_VERSION = dependencies["onnxruntime-web"].replace("^", "")
 
 /**
  * The default configuration fallback for the AttentionMonitor.
@@ -14,8 +9,8 @@ const ONNX_VERSION = dependencies["onnxruntime-web"].replace("^", "")
 export const DEFAULT_CONFIG: MonitorConfig = {
     assets: {
         wasm: {
-            mediapipe: `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`,
-            onnx: `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ONNX_VERSION}/dist/`
+            mediapipe: `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${__MEDIAPIPE_VERSION__}/wasm`,
+            onnx: `https://cdn.jsdelivr.net/npm/onnxruntime-web@${__ONNX_VERSION__}/dist/`
         },
         models: {
             face: "/models/face_landmarker.task",
