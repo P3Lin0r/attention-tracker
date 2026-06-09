@@ -20,9 +20,6 @@ type MonitorEvents = {
     /** Ensures the continuous reporting of analysis results while running. */
     "attention": [AttentionResult]
 
-    /** Fired when initialization completes and models are loaded. */
-    "ready": []
-
     /** Triggers when an internal error occurs. */
     "error": [Error]
 }
@@ -141,7 +138,6 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
                     const {type, payload } = e.data
                     
                     if (type === "INIT_DONE") {
-                        this.emit("ready");
                         resolve()
                     }
     
@@ -174,7 +170,6 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
         try {
             this.localTracker = new FaceTracker(this.config)
             await this.localTracker.init()
-            this.emit("ready")
         } catch (error: any) {
             this.emit("error", new Error(error.message || "Failed to init local tracker"));
             throw error;
@@ -333,7 +328,9 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
         } catch (error) {
             console.error("Failed to grab/process frame:", error);
             if (this.isRunning){
-                this.animationFrameId = requestAnimationFrame(() => this.processNextFrame());
+                setTimeout(()=>{
+                    this.animationFrameId = requestAnimationFrame(() => this.processNextFrame());
+                }, 500)
             }
         }
     }
@@ -347,16 +344,6 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
      * @returns {this} 
      */
     public override on(event: "attention", fn: (result: AttentionResult) => void): this;
-    
-    /**
-     * Subscribes to monitor events.
-     *
-     * @public
-     * @param {"ready"} event Event `ready`. Fired when initialization completes and models are loaded.
-     * @param {() => void} fn Callback triggered on completion.
-     * @returns {this} 
-     */
-    public override on(event: "ready", fn: () => void): this;
     
     /**
      * Subscribes to monitor events.
