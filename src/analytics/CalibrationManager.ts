@@ -1,5 +1,5 @@
 import { HistoryBuffer } from "@/core/history/History"
-import type { CalibrationConfig, TrackerSnapshot } from "@/types"
+import type { CalibrationConfig, CalibrationState, TrackerSnapshot } from "@/types"
 import { clamp, rad2degScalar } from "@/utils/helpers"
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision"
 
@@ -13,21 +13,29 @@ import type { NormalizedLandmark } from "@mediapipe/tasks-vision"
  */
 export class CalibrationManager {
     private recentAreas: HistoryBuffer
-    private recentYaws: HistoryBuffer
-    private recentPitches: HistoryBuffer
+    private recentGazeYaws: HistoryBuffer
+    private recentGazePitches: HistoryBuffer
+    private recentHeadYaws: HistoryBuffer
+    private recentHeadPitches: HistoryBuffer
+    
     private recentCx: HistoryBuffer
     private recentCy: HistoryBuffer
     
     private baseArea = 0
-    private baseYaw = 0
-    private basePitch = 0
+    private baseGazeYaw = 0
+    private baseGazePitch = 0
+    private baseHeadYaw = 0
+    private baseHeadPitch = 0
     private baseCx = 0
     private baseCy = 0
-
+    
+    private baseGazeStd = 0
+    private baseHeadStd = 0
+    
     isCalibrated = false
     private anomalyAccumulatorMs = 0
     private lastUpdateTime = 0
-
+    
     /**
      * Creates an instance of CalibrationManager.
      *
@@ -36,8 +44,10 @@ export class CalibrationManager {
      */
     constructor(private config: CalibrationConfig) {
         this.recentAreas = new HistoryBuffer(this.config.gatheringSize)
-        this.recentYaws = new HistoryBuffer(this.config.gatheringSize)
-        this.recentPitches = new HistoryBuffer(this.config.gatheringSize)
+        this.recentGazeYaws = new HistoryBuffer(this.config.gatheringSize)
+        this.recentGazePitches = new HistoryBuffer(this.config.gatheringSize)
+        this.recentHeadYaws = new HistoryBuffer(this.config.gatheringSize)
+        this.recentHeadPitches = new HistoryBuffer(this.config.gatheringSize)
         this.recentCx = new HistoryBuffer(this.config.gatheringSize)
         this.recentCy = new HistoryBuffer(this.config.gatheringSize)
     }
@@ -79,13 +89,18 @@ export class CalibrationManager {
         const cy = nose.y
 
         this.recentAreas.push(area)
-        this.recentYaws.push(yaw)
-        this.recentPitches.push(pitch)
+        this.recentGazeYaws.push(yaw)
+        this.recentGazePitches.push(pitch)
         this.recentCx.push(cx)
         this.recentCy.push(cy)
 
+        if (data.headAngles){
+            this.recentHeadYaws.push(data.headAngles[0])
+            this.recentHeadPitches.push(data.headAngles[1])
+        }
+
         if (!this.isCalibrated){
-            if (this.recentAreas.isFull && this.recentAreas.length >= 10) {
+            if (this.recentAreas.isFull) {
                 this.applyBaseline()
             }
             return
@@ -121,10 +136,15 @@ export class CalibrationManager {
      */
     private applyBaseline(){
         this.baseArea = this.recentAreas.median()
-        this.baseYaw = this.recentYaws.median()
-        this.basePitch = this.recentPitches.median()
+        this.baseGazeYaw = this.recentGazeYaws.median()
+        this.baseGazePitch = this.recentGazePitches.median()
+        this.baseHeadYaw = this.recentGazeYaws.median() 
+        this.baseHeadPitch = this.recentGazePitches.median() 
         this.baseCx = this.recentCx.median()
         this.baseCy = this.recentCy.median()
+
+        this.baseGazeStd = this.recentGazeYaws.std() + this.recentGazePitches.std()
+        this.baseHeadStd = this.recentHeadYaws.std() + this.recentHeadPitches.std()
 
         this.isCalibrated = true
     }
@@ -132,24 +152,33 @@ export class CalibrationManager {
     /** Clears all history buffers and calibration states. */
     reset(): void {
         this.recentAreas.clear()
-        this.recentPitches.clear()
-        this.recentYaws.clear()
+        this.recentGazeYaws.clear()
+        this.recentGazePitches.clear()
+        this.recentHeadYaws.clear()
+        this.recentHeadPitches.clear()
         this.recentCx.clear()
         this.recentCy.clear()
         
         this.isCalibrated = false
         this.anomalyAccumulatorMs = 0
         this.lastUpdateTime = 0
+
+        this.baseGazeStd = 0
+        this.baseHeadStd = 0
     }
     
-    getState(){
+    getState(): CalibrationState{
         return {
-            yaw: this.baseYaw,
-            pitch: this.basePitch,
+            gazeYaw: this.baseGazeYaw,
+            gazePitch: this.baseGazePitch,
+            headYaw: this.baseHeadYaw,
+            headPitch: this.baseHeadPitch,
             cx: this.baseCx,
             cy: this.baseCy,
             area: this.baseArea,
-            isCalibrated: this.isCalibrated 
+            isCalibrated: this.isCalibrated,
+            baseGazeStd: this.baseGazeStd,
+            baseHeadStd: this.baseHeadStd
         }
     }
 }
