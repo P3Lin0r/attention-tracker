@@ -240,11 +240,10 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
      * Starts the processing loop, grabbing frames from the provided video source.
      *
      * @public
-     * @async
      * @param {TexImageSource} videoElement The HTML video, canvas, or image element to track.
      * @returns {Promise<void>} 
      */
-    public async start(videoElement: TexImageSource): Promise<void> {
+    public start(videoElement: TexImageSource): void {
         if (this.isRunning) return
 
         this.videoElement = videoElement
