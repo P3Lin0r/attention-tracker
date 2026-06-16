@@ -10,16 +10,18 @@ import type {
 import { HistoryBuffer } from "@/core/history/History";
 
 /**
- * Aggregates all tracking and calibration data to an `attention score` and determines 
- * the user's high-level state `(NORMAL, DISTRACTED, DROWSY, MICROSLEEP, ADHD)`.
+ * Aggregates all tracking and calibration data to an `attention score (0 to 1)` and determines 
+ * the user's high-level state **{@link AttentionStatus}**.
  * Combines gaze variance, blinks (PERCLOS), yawning, and emotional states to calculate penalties.
  * 
  * @export
  * @class AttentionEngine
  */
 export class AttentionEngine {
-    private yawHistory: HistoryBuffer
-    private pitchHistory: HistoryBuffer
+    private gazeYawDiffHistory: HistoryBuffer
+    private gazePitchDiffHistory: HistoryBuffer
+    private headYawDiffHistory: HistoryBuffer
+    private headPitchDiffHistory: HistoryBuffer
 
     status: AttentionStatus = "NORMAL"
     score = 1
@@ -34,8 +36,10 @@ export class AttentionEngine {
      * @param {EngineConfig} config Configuration mapping penalty weights and time windows.
      */
     constructor(private config: EngineConfig){
-        this.yawHistory = new HistoryBuffer(this.config.yawTimeWindow) 
-        this.pitchHistory = new HistoryBuffer(this.config.pitchTimeWindow) 
+        this.gazeYawDiffHistory = new HistoryBuffer(this.config.yawDiffTimeWindow)
+        this.gazePitchDiffHistory = new HistoryBuffer(this.config.pitchDiffTimeWindow) 
+        this.headYawDiffHistory = new HistoryBuffer(this.config.yawDiffTimeWindow)
+        this.headPitchDiffHistory = new HistoryBuffer(this.config.pitchDiffTimeWindow) 
     }
 
     /**
@@ -89,39 +93,67 @@ export class AttentionEngine {
         // ==============================
         if (snapshot.gaze && calibrationState.isCalibrated){
             const [gx, gy, gz] = snapshot.gaze
-            const yaw = rad2degScalar(Math.atan2(gx, Math.abs(gz) + 1e-6))
-            const pitch = rad2degScalar(Math.asin(clamp(-gy, -1, 1)))
+            const gazeYaw = rad2degScalar(Math.atan2(gx, Math.abs(gz) + 1e-6))
+            const gazePitch = rad2degScalar(Math.asin(clamp(-gy, -1, 1)))
+            const [headYaw, headPitch, _roll] = snapshot.headAngles
 
-            const yawDiff = yaw - calibrationState.yaw
-            const pitchDiff = pitch - calibrationState.pitch
+            const gazeYawDiff = gazeYaw - calibrationState.gazeYaw
+            const gazePitchDiff = gazePitch - calibrationState.gazePitch
+            this.gazeYawDiffHistory.push(gazeYawDiff)
+            this.gazePitchDiffHistory.push(gazePitchDiff)
             
-            this.yawHistory.push(yawDiff)
-            this.pitchHistory.push(pitchDiff)
+            const headYawDiff = headYaw - calibrationState.headYaw
+            const headPitchDiff = headPitch - calibrationState.headPitch
+            this.headYawDiffHistory.push(headYawDiff)
+            this.headPitchDiffHistory.push(headPitchDiff)
 
-            const yawPenalty = Math.max(0, (Math.abs(yawDiff) - 15) / 25)
-            const pitchPenalty = Math.max(0, (Math.abs(pitchDiff) - 10) / 20)
+            const {
+                yawDeadzone,
+                pitchDeadzone,
+                yawScale,
+                pitchScale,
+            } = this.config.gazeDynamics
+
+            const yawPenalty = Math.max(0, (Math.abs(gazeYawDiff) - yawDeadzone) / yawScale)
+            const pitchPenalty = Math.max(0, (Math.abs(gazePitchDiff) - pitchDeadzone) / pitchScale)
             details.penalties.gaze = Math.min(1, yawPenalty + pitchPenalty)
 
-            // Detect high variance (jittery gaze without losing focus entirely)
-            if (this.yawHistory.isFull && this.yawHistory.length >= 15){
-                const yawStd = this.yawHistory.std()
-                const pitchStd = this.pitchHistory.std()
+            // Detect high variance (jittery gaze and head without losing focus entirely)
+            if (this.gazeYawDiffHistory.isFull && this.headYawDiffHistory.isFull){
+                const gazeStd = this.gazeYawDiffHistory.std() + this.gazePitchDiffHistory.std()
+                const headStd = this.headYawDiffHistory.std() + this.headPitchDiffHistory.std()
+
+                const {
+                    adhdWeights,
+                    adhdStdMultiplier,
+                    minStdThreshold
+                } = this.config.adhdDynamics
+
+                // Current weighted combined fidgeting level
+                const combinedStd = (headStd * adhdWeights.head) + (gazeStd * adhdWeights.gaze)
+                const baseCombinedStd = (calibrationState.baseHeadStd * adhdWeights.head) +
+                    (calibrationState.baseGazeStd * adhdWeights.gaze)
                 
-                if ((yawStd + pitchStd) > 18){
+                const personalStdThreshold = Math.max(
+                    minStdThreshold,
+                    baseCombinedStd * adhdStdMultiplier
+                )
+
+                if (combinedStd > personalStdThreshold){
                     details.isADHD = true
                 }
             }
         }
 
-        details.penalties.yawn = signals.yawn.status == "YAWNING" ? 0.4 : 0
+        details.penalties.yawn = signals.yawn.status == "YAWNING" ? this.config.modifiers.yawnPenalty : 0
         details.penalties.perclos = signals.blink.perclos
 
         const emotion = signals.emotion
         if (emotion == "FOCUSED"){
-            details.penalties.emotionModifier = 0.4
+            details.penalties.emotionModifier = this.config.modifiers.emotionFocused
         }
         else if (emotion == "THINKING"){
-            details.penalties.emotionModifier = 0.6
+            details.penalties.emotionModifier = this.config.modifiers.emotionThinking
         }
 
         const totalPenalty = (
@@ -137,7 +169,7 @@ export class AttentionEngine {
             this.score = 0.98 * this.score + 0.02 * newRawScore
         }
 
-        this.updateStatus(details.isADHD)
+        this.updateStatus(details)
         return this.buildResult(details)
     }
 
@@ -158,21 +190,22 @@ export class AttentionEngine {
      * debounce to prevent status flickering (e.g., dropping to Distracted for a millisecond).
      *
      * @private
-     * @param {boolean} isADHD True if high variance/fidgeting was detected.
+     * @param {AttentionDetails} details Details Context details to determine why the score is low.
      */
-    private updateStatus(isADHD: boolean){
+    private updateStatus(details: AttentionDetails){
         let calculatedTarget: AttentionStatus = "NORMAL"
+        const gazeImpact = details.penalties.gaze * this.config.weights.gaze
+        const fatigueImpact = (details.penalties.perclos * this.config.weights.perclos) + 
+            (details.penalties.yawn * this.config.weights.yawn)
         
-        if (this.score >= 0.70){
-            calculatedTarget = isADHD ? "ADHD" : "NORMAL"
-        } else if (this.score > 0.45) {
-            calculatedTarget = "DISTRACTED"
-        } else if (this.score > 0.25) {
-            calculatedTarget = "DROWSY"
+        if (this.score >= this.config.thresholds.normalScoreCutoff){
+            calculatedTarget = details.isADHD ? "ADHD" : "NORMAL"
         } else {
-            // Note: If FaceLost occurs, score drops to 0, which transitions to MICROSLEEP here.
-            // This could create an artifact transition chain (MICROSLEEP -> DROWSY -> NORMAL) upon recovery.
-            calculatedTarget = "MICROSLEEP" 
+            if (fatigueImpact > gazeImpact) { 
+                calculatedTarget = "FATIGUED"
+            } else {
+                calculatedTarget = "DISTRACTED"
+            }
         }
 
         const now = performance.now()
@@ -190,9 +223,11 @@ export class AttentionEngine {
 
     /** Resets the engine's histories and scores to their default state. */
     reset(){
-        this.yawHistory.clear()
-        this.pitchHistory.clear()
-
+        this.gazeYawDiffHistory.clear()
+        this.gazePitchDiffHistory.clear()
+        this.headYawDiffHistory.clear()
+        this.headPitchDiffHistory.clear()
+        
         this.score = 1
         this.status = "NORMAL"
         this.targetStatus = "NORMAL"
