@@ -12,7 +12,7 @@ import { DEFAULT_CONFIG } from "@config/defaults"
 export type Vector3D = [number, number, number]
 
 /** The high-level semantic status of the user's attention. */
-export type AttentionStatus = "DISTRACTED" | "NORMAL" | "DROWSY" | "MICROSLEEP" | "ADHD" | "NOT_DETECTED"
+export type AttentionStatus = "DISTRACTED" | "NORMAL" | "DROWSY" | "MICROSLEEP" | "FATIGUED" | "ADHD" | "NOT_DETECTED"
 
 /** Detected facial emotion. */
 export type EmotionStatus = "NEUTRAL" | "HAPPY" | "SAD" | "THINKING" | "FOCUSED"
@@ -33,12 +33,27 @@ export type TrackerSnapshot = {
 
 /** The established user calibration baseline. */
 export type CalibrationState = {
-    yaw: number;
-    pitch: number;
-    cx: number;
-    cy: number;
-    area: number;
-    isCalibrated: boolean;
+    /** Calibrated neutral horizontal gaze angle (in degrees). */
+    gazeYaw: number
+    /** Calibrated neutral vertical gaze angle (in degrees). */
+    gazePitch: number
+    /** Calibrated neutral horizontal head angle (in degrees). */
+    headYaw: number
+    /** Calibrated neutral vertical head angle (in degrees). */
+    headPitch: number
+    /** Calibrated X coordinate of the face bounding box center. */
+    cx: number
+    /** Calibrated Y coordinate of the face bounding box center. */
+    cy: number
+    /** Calibrated baseline face area (used for distance estimation). */
+    area: number
+    /** The standard deviation of gaze angles during the calibration period (natural eye jitter). */
+    baseGazeStd: number
+    /** The standard deviation of head angles during the calibration period (natural head sway). */
+    baseHeadStd: number
+    /** Indicates whether the baseline has been successfully established. */
+    isCalibrated: boolean
+    
 }
 
 /** Processed semantic features obtained from tracking. */
@@ -176,10 +191,67 @@ export interface CalibrationConfig {
 export interface EngineConfig {
     /** Time (in milliseconds) a new status must be maintained before it is officially applied (debouncing). */
     timeToConfirm: number
-    /** Time window (in seconds) to calculate standard deviation for horizontal head movements (yaw). */
-    yawTimeWindow: number
-    /** Time window (in seconds) to calculate standard deviation for vertical head movements (pitch). */
-    pitchTimeWindow: number
+    /**
+     * Time window (in seconds) to calculate the standard deviation for horizontal movements (yaw) 
+     * for both gaze and head posture.
+     */
+    yawDiffTimeWindow: number
+    /**
+     * Time window (in seconds) to calculate the standard deviation for vertical movements (pitch) 
+     * for both gaze and head posture.
+     */
+    pitchDiffTimeWindow: number
+
+    /** Configuration for dynamic gaze penalization based on deviation from the calibrated baseline. */
+    gazeDynamics: {
+        /** Degrees of horizontal deviation allowed before applying a penalty. */
+        yawDeadzone: number
+        /** Degrees of vertical deviation allowed before applying a penalty. */
+        pitchDeadzone: number
+        /** Scaling divider to determine the severity of the horizontal penalty once the deadzone is crossed. */
+        yawScale: number
+        /** Scaling divider to determine the severity of the vertical penalty once the deadzone is crossed. */
+        pitchScale: number
+    }
+
+    /** Configuration for detecting hyperactive/fidgeting behavior (ADHD state). */
+    adhdDynamics: {
+        /** Weights determining how much head vs. gaze variance contributes to the ADHD score. */
+        adhdWeights: {
+            head: number
+            gaze: number
+        }
+        /** Multiplier applied to the baseline standard deviation to trigger an ADHD status. */
+        adhdStdMultiplier: number
+        /** The absolute minimum standard deviation required to trigger an ADHD status, preventing false positives for extremely still users. */
+        minStdThreshold: number
+    }
+    /** Configurable score boundaries that trigger status changes. */
+    thresholds: {
+        /** 
+         * The minimum attention score (0.0 - 1.0) required to maintain a `NORMAL` (or `ADHD`) status.
+         * Dropping below this cutoff transitions the user to `DISTRACTED` or `FATIGUED`.
+         */
+        normalScoreCutoff: number
+    }
+    /** Dynamic multipliers and fixed penalty values based on specific detected behaviors or emotions. */
+    modifiers: {
+        /** The absolute penalty value added to the total penalty calculation while an active yawn is detected.*/
+        yawnPenalty: number
+        /** 
+         * Penalty multiplier (0.0 to 1.0) applied when the user's emotion is `THINKING`.
+         * Usually < 1.0 to forgive slight gaze deviations during cognitive load.
+         * If the value is 0.3, this means that all penalties will be reduced by 70%.
+         */
+        emotionThinking: number
+        /**
+         * Penalty multiplier (0.0 to 1.0) applied when the user's emotion is `FOCUSED`. 
+         * Usually < 1.0 to significantly reduce penalties when the user is deep in work.
+         * If the value is 0.3, this means that all penalties will be reduced by 70%.
+        */
+        emotionFocused: number
+    }
+
     /** 
      * Penalty weights applied to the attention score calculation. 
      * Modifies how perclos(percentage of eye closure), yawns, and gaze variance affect the final score.
