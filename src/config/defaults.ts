@@ -23,7 +23,7 @@ export const DEFAULT_CONFIG: MonitorConfig = {
     gazeStrategy: "auto",
     settings: {
         blink: {
-            thresholdSensitivity: 0.72,
+            thresholdSensitivity: 0.50,
             blinkDurationLimit: 0.4,
             microsleepLimit: 2,
             perclosDrowsyThreshold: 0.15, 
@@ -42,11 +42,33 @@ export const DEFAULT_CONFIG: MonitorConfig = {
         calibration: {
             gatheringSize: 2,
             maxAnomalyMs: 5000
-        }, 
+        },
         engine: {
             timeToConfirm: 500,
-            yawTimeWindow: 4,
-            pitchTimeWindow: 4,
+            yawDiffTimeWindow: 4,
+            pitchDiffTimeWindow: 4,
+            gazeDynamics: {
+                yawDeadzone: 15,
+                pitchDeadzone: 10,
+                yawScale: 25,
+                pitchScale: 20,
+            },
+            adhdDynamics: {
+                adhdWeights: {
+                    head: 0.4,
+                    gaze: 0.6
+                },
+                adhdStdMultiplier: 3.5,
+                minStdThreshold: 5,
+            },
+            thresholds: {
+                normalScoreCutoff: 0.70
+            },
+            modifiers: {
+                yawnPenalty: 0.4,
+                emotionThinking: 0.6,
+                emotionFocused: 0.4,
+            },
             weights: {
                 gaze: 0.5,
                 perclos: 0.35, 
