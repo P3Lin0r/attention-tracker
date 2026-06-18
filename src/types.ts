@@ -118,22 +118,36 @@ export type AttentionResult = {
  * @interface BlinkConfig
  */
 export interface BlinkConfig {
-    /** Multiplier applied to the median resting EAR to determine the dynamic closure threshold. */
+    /**
+     * Multiplier applied to the median resting EAR to determine the dynamic closure threshold. 
+     * @default 0.6
+     */
     thresholdSensitivity: number
-    /** Maximum duration (in seconds) for a closure to be counted as a normal blink. */
+    /** 
+     * Maximum duration (in seconds) for a closure to be counted as a normal blink. 
+     * @default 0.4 
+     */
     blinkDurationLimit: number
-    /** Minimum duration (in seconds) of continuous eye closure to trigger a MICROSLEEP status. */
+    /** 
+     * Minimum duration (in seconds) of continuous eye closure to trigger a MICROSLEEP status. 
+     * @default 2
+     */
     microsleepLimit: number
-    /** The threshold (0.0 to 1.0) of PERCLOS (Percentage of Eye Closure) required to trigger a DROWSY status. */
+    /** 
+     * The threshold (0.0 to 1.0) of PERCLOS (Percentage of Eye Closure) required to trigger a DROWSY status. 
+     * @default 0.20
+     */
     perclosDrowsyThreshold: number
     /** 
      * The duration (in seconds) of the EAR history buffer used to calculate the dynamic resting baseline. 
      * A longer window provides a more stable median but adapts slower to changes in head posture or distance.
+     * @default 5 
      */
     earTimeWindow: number
     /**
      * The duration (in seconds) of the sliding window used to compute the PERCLOS (Percentage of Eye Closure) score. 
      * Defines how far back in time the detector looks to evaluate the user's drowsiness level.
+     * @default 60
      */
     perclosTimeWindow: number
 }
@@ -145,15 +159,25 @@ export interface BlinkConfig {
  * @interface YawnConfig
  */
 export interface YawnConfig {
-    /** Multiplier applied to the median resting MAR to determine the dynamic open-mouth threshold. */
+    /** 
+     * Multiplier applied to the median resting MAR to determine the dynamic open-mouth threshold. 
+     * @default 2.2
+     */
     thresholdSensitivity: number
-    /** Minimum duration (in seconds) of continuous mouth opening to be classified as a yawn. */
+    /** 
+     * Minimum duration (in seconds) of continuous mouth opening to be classified as a yawn. 
+     * @default 1.4
+     */
     minYawnDuration: number
-    /** Maximum duration (in seconds) to consider a movement a yawn (filters out continuous talking/shouting). */
+    /** 
+     * Maximum duration (in seconds) to consider a movement a yawn (filters out continuous talking/shouting).
+     * @default 6
+     */
     maxYawnDuration: number
     /**
      * The duration (in seconds) of the MAR history buffer to compute the median resting mouth state. 
      * This baseline is crucial for adapting the yawn threshold dynamically, compensating for distance and micro-movements.
+     * @default 10 
      */
     marTimeWindow: number
 }
@@ -165,7 +189,10 @@ export interface YawnConfig {
  * @interface EmotionConfig
  */
 export interface EmotionConfig {
-    /** Number of {@link EmotionStatus} values collected from recent frames to buffer for emotion smoothing. */
+    /** 
+     * Number of {@link EmotionStatus} values collected from recent frames to buffer for emotion smoothing. 
+     * @default 5
+     */
     historyLimit: number
 }
 
@@ -176,9 +203,15 @@ export interface EmotionConfig {
  * @interface CalibrationConfig
  */
 export interface CalibrationConfig {
-    /** Time window (in seconds) to gather data before calculating a median baseline. */
+    /** 
+     * Time window (in seconds) to gather data before calculating a median baseline. 
+     * @default 2
+     */
     gatheringSize: number
-    /** Maximum allowed time (in milliseconds) the user can stay in an anomalous state before a forced recalibration triggers. */
+    /** 
+     * Maximum allowed time (in milliseconds) the user can stay in an anomalous state before a forced recalibration triggers. 
+     * @default 5000
+     */
     maxAnomalyMs: number
 }
 
@@ -189,28 +222,51 @@ export interface CalibrationConfig {
  * @interface EngineConfig
  */
 export interface EngineConfig {
-    /** Time (in milliseconds) a new status must be maintained before it is officially applied (debouncing). */
+    /** 
+     * Time (in milliseconds) a new status must be maintained before it is officially applied (debouncing). 
+     * @default 500
+     */
     timeToConfirm: number
     /**
      * Time window (in seconds) to calculate the standard deviation for horizontal movements (yaw) 
      * for both gaze and head posture.
+     * @default 4
      */
     yawDiffTimeWindow: number
     /**
      * Time window (in seconds) to calculate the standard deviation for vertical movements (pitch) 
      * for both gaze and head posture.
+     * @default 4
      */
     pitchDiffTimeWindow: number
 
     /** Configuration for dynamic gaze penalization based on deviation from the calibrated baseline. */
     gazeDynamics: {
-        /** Degrees of horizontal deviation allowed before applying a penalty. */
+        /** 
+         * Degrees of horizontal deviation allowed before applying a penalty. 
+         * @default 15 
+         */
         yawDeadzone: number
-        /** Degrees of vertical deviation allowed before applying a penalty. */
+        /** 
+         * Degrees of vertical deviation allowed before applying a penalty. 
+         * @default 10
+         */
         pitchDeadzone: number
-        /** Scaling divider to determine the severity of the horizontal penalty once the deadzone is crossed. */
+        /** 
+         * Scaling divider to determine the severity of the horizontal penalty once the deadzone is crossed. 
+         * @remarks
+         * **Note:** Because this value acts as a divisor, there is an inverse relationship. 
+         * A **lower** value results in a **harsher** penalty, while a **higher** value results in a **smaller** penalty.
+         * @default 25 
+         */
         yawScale: number
-        /** Scaling divider to determine the severity of the vertical penalty once the deadzone is crossed. */
+        /** 
+         * Scaling divider to determine the severity of the vertical penalty once the deadzone is crossed. 
+         * @remarks
+         * **Note:** Because this value acts as a divisor, there is an inverse relationship. 
+         * A **lower** value results in a **harsher** penalty, while a **higher** value results in a **smaller** penalty.
+         * @default 20
+         */
         pitchScale: number
     }
 
@@ -218,12 +274,20 @@ export interface EngineConfig {
     adhdDynamics: {
         /** Weights determining how much head vs. gaze variance contributes to the ADHD score. */
         adhdWeights: {
+            /** @default 0.4 */
             head: number
+            /** @default 0.6 */
             gaze: number
         }
-        /** Multiplier applied to the baseline standard deviation to trigger an ADHD status. */
+        /** 
+         * Multiplier applied to the baseline standard deviation to trigger an ADHD status. 
+         * @default 3.5
+         */
         adhdStdMultiplier: number
-        /** The absolute minimum standard deviation required to trigger an ADHD status, preventing false positives for extremely still users. */
+        /** 
+         * The absolute minimum standard deviation required to trigger an ADHD status, preventing false positives for extremely still users. 
+         * @default 5 
+         */
         minStdThreshold: number
     }
     /** Configurable score boundaries that trigger status changes. */
@@ -231,34 +295,47 @@ export interface EngineConfig {
         /** 
          * The minimum attention score (0.0 - 1.0) required to maintain a `NORMAL` (or `ADHD`) status.
          * Dropping below this cutoff transitions the user to `DISTRACTED` or `FATIGUED`.
+         * @default 0.70
          */
         normalScoreCutoff: number
     }
     /** Dynamic multipliers and fixed penalty values based on specific detected behaviors or emotions. */
     modifiers: {
-        /** The absolute penalty value added to the total penalty calculation while an active yawn is detected.*/
+        /** 
+         * The absolute penalty value added to the total penalty calculation while an active yawn is detected.
+         * @default 0.4
+         */
         yawnPenalty: number
         /** 
          * Penalty multiplier (0.0 to 1.0) applied when the user's emotion is `THINKING`.
          * Usually < 1.0 to forgive slight gaze deviations during cognitive load.
          * If the value is 0.3, this means that all penalties will be reduced by 70%.
+         * @default 0.6
          */
         emotionThinking: number
         /**
          * Penalty multiplier (0.0 to 1.0) applied when the user's emotion is `FOCUSED`. 
          * Usually < 1.0 to significantly reduce penalties when the user is deep in work.
          * If the value is 0.3, this means that all penalties will be reduced by 70%.
-        */
+         * @default 0.4
+         */
         emotionFocused: number
     }
 
     /** 
-     * Penalty weights applied to the attention score calculation. 
+     * Penalty weights applied to the "soft" attention score calculation.
      * Modifies how perclos(percentage of eye closure), yawns, and gaze variance affect the final score.
+     * @remarks
+     * These weights only dictate gradual score drops. Critical status changes 
+     * (e.g., `MICROSLEEP` or high `DROWSY` levels) act as **hard overrides**, 
+     * bypassing these weights to immediately plummet the score to ensure safety.
      */
     weights: {
+        /** @default 0.5 */
         gaze: number
-        perclos: number 
+        /** @default 0.35 */
+        perclos: number
+        /** @default 0.15 */
         yawn: number
     }
 }
@@ -316,18 +393,21 @@ export interface MonitorConfig {
     /**
      * If true, runs the tracking pipeline off the main thread in a Web Worker. 
      * Highly recommended to prevent UI blocking.
+     * @default true
      */
     worker: boolean
 
     /**
      * The hardware backend for ONNX/MediaPipe inference.
-     * See {@link deviceOptions}. 
+     * See {@link deviceOptions}.
+     * @default "GPU" 
      */
     backend: deviceOptions
 
     /** 
      * The strategy used to compute the gaze vector. 
-     * See {@link GazeStrategy}. 
+     * See {@link GazeStrategy}.
+     * @default "auto"
      */
     gazeStrategy: GazeStrategy
 

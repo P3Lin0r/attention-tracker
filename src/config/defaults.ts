@@ -19,21 +19,21 @@ export const DEFAULT_CONFIG: MonitorConfig = {
         }
     },
     worker: true,
-    backend: "CPU",
+    backend: "GPU",
     gazeStrategy: "auto",
     settings: {
         blink: {
-            thresholdSensitivity: 0.50,
+            thresholdSensitivity: 0.6,
             blinkDurationLimit: 0.4,
             microsleepLimit: 2,
-            perclosDrowsyThreshold: 0.15, 
+            perclosDrowsyThreshold: 0.20, 
             earTimeWindow: 5,
             perclosTimeWindow: 60
         },
         yawn: {
             thresholdSensitivity: 2.2,
-            minYawnDuration: 1.5, 
-            maxYawnDuration: 8,
+            minYawnDuration: 1.4, 
+            maxYawnDuration: 6,
             marTimeWindow: 10
         },
         emotion: {

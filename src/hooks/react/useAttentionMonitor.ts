@@ -55,7 +55,7 @@ export interface UseAttentionMonitorOptions {
      * Set this to `false` if you need to wait for a specific user action or state
      * (e.g., clicking a "Start tracking" button, or accepting privacy terms).
      * 
-     * @defaultvalue true
+     * @default true
      * @example
      * // Wait for explicit user permission before starting
      * const { start } = useAttentionMonitor(videoRef, {}, { autoStart: false });
@@ -89,7 +89,7 @@ export interface UseAttentionMonitorOptions {
      * * `0` : Update every frame (Not recommended unless your UI is extremely simple).
      * * `100 - 500` : Ideal range for updating UI dashboards, text, or progress bars.
      * 
-     * @defaultvalue 0
+     * @default 0
      * @example
      * // The component will re-render a maximum of 4 times per second (every 250ms).
      * // This keeps the UI responsive while still feeling "real-time".
