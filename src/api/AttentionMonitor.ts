@@ -205,7 +205,13 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
                 calibration: this.calibration.getState()
             }
             
-            this.emit("attention", emptyResult)
+            try {
+                this.emit("attention", emptyResult)
+            } catch (error) {
+                console.error("[AttentionMonitor] Uncaught error in user 'attention' listener:", error)
+                this.emit("error", error instanceof Error ? error : new Error(String(error)))
+            }
+
             if (this.isRunning){
                 this.animationFrameId = requestAnimationFrame(()=>this.processNextFrame())
             }
@@ -229,7 +235,12 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
             calibration: calibState
         }
 
-        this.emit("attention", finalResult)
+        try {
+            this.emit("attention", finalResult)
+        } catch (error) {
+            console.error("[AttentionMonitor] Uncaught error in user 'attention' listener:", error)
+            this.emit("error", error instanceof Error ? error : new Error(String(error)))
+        }
 
         if (this.isRunning){
             this.animationFrameId = requestAnimationFrame(()=> this.processNextFrame())
