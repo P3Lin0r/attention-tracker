@@ -144,11 +144,18 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
                     if (type === "RESULT") {
                         this.handleResult(payload.snapshot, payload.signals);
                     }
+
+                    if (type === "ERROR") {
+                        const err = new Error(payload.message);
+                        reject(err)
+                        this.emit("error", err);
+                    }
                 }
                 
-                this.worker.onerror = (error) => {
-                    reject(error)
-                    this.emit("error", new Error(error.message));
+                this.worker.onerror = (errorEvent: ErrorEvent) => {
+                    const err = new Error(`Fatal Worker Crash: ${errorEvent.message}`)
+                    reject(err)
+                    this.emit("error", err)
                 }
 
                 this.worker.postMessage({type: "INIT", payload: { config: this.config }})
