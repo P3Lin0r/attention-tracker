@@ -5,10 +5,10 @@ import pkg from "./package.json"
 const cleanVersion = (version: string) => version.replace(/[\^~]/g, '');
 
 export default defineConfig({
-    root: "./demo",
-    publicDir: "public",
+    publicDir: path.resolve(__dirname, "./public"),
     resolve: {
         alias: {
+            "attention-tracker": path.resolve(__dirname, "./src/index.ts"),
             "@": path.resolve(__dirname, "./src"),
             "@config": path.resolve(__dirname, "./src/config"),
             "@utils": path.resolve(__dirname, "./src/utils"),
@@ -16,6 +16,7 @@ export default defineConfig({
             "@analytics": path.resolve(__dirname, "./src/analytics"),
             "@core": path.resolve(__dirname, "./src/core"),
             "@workers": path.resolve(__dirname, "./src/workers"),
+            "@hooks": path.resolve(__dirname, "./src/hooks"),
             "@api": path.resolve(__dirname, "./src/api")
         }
     },
@@ -30,8 +31,5 @@ export default defineConfig({
     },
     worker: {
         format: "es"
-    },
-    define: {
-        global: "globalThis"
-    },
+    }
 })

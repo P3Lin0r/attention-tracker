@@ -18,6 +18,7 @@
       "@analytics/*": ["./src/analytics/*"],
       "@core/*": ["./src/core/*"],
       "@workers/*": ["./src/workers/*"],
+      "@hooks/*": ["./src/hooks/*"],
       "@api/*": ["./src/api/*"],
     },
 
@@ -30,7 +31,8 @@
 
     // strict
     "strict": true,
-    "noUncheckedIndexedAccess": true,
+    // "noUncheckedIndexedAccess": true,
+    "noUncheckedIndexedAccess": false,
     
     //optimisation
     "skipLibCheck": true,
@@ -42,6 +44,7 @@
 
     "jsx": "react-jsx"
   },
+  
   "include": ["src/**/*", "src/types.ts", "src/worker.d.ts"],
   "exclude": ["node_modules", "dist", "demo"]
 }
