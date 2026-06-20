@@ -48,7 +48,6 @@ export class EmotionsDetector {
     async init(): Promise<void> {
         try {
             this.session = await ort.InferenceSession.create(this.modelPath)
-            console.log("✅ ONNX Emotions Model loaded")
         } catch (error) {
             console.error("Failed to load ONNX model:", error);
             throw error;

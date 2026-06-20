@@ -75,7 +75,14 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
         const finalConfig = deepMerge<MonitorConfig>(DEFAULT_CONFIG, userConfig)
         const monitor = new AttentionMonitor(finalConfig)
 
+        console.log("[AttentionTracker] Initializing neural networks and allocating memory...")
+        
+        const startTime = performance.now()
         await monitor.init()
+        const loadTime = ((performance.now() - startTime) / 1000).toFixed(2)
+
+        console.log(`[AttentionTracker] Models loaded successfully in ${loadTime}s. Operating in ${finalConfig.worker ? 'Web Worker' : 'Main Thread'} mode.`)
+        
         return monitor
     }
 
@@ -112,10 +119,10 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
                 const path = categoryAssets[key as keyof typeof categoryAssets]
                 if(path){
                     try {
-                        const url = new URL(path, window.location.origin).href
-                        categoryAssets[key as keyof typeof categoryAssets] = url
+                        const url = new globalThis.URL(path, window.location.origin).href;
+                        (categoryAssets as Record<string, string>)[key] = url
                     } catch (error) {
-                        console.error(`Failed to convert path ${key}:`, error);
+                        console.error(`Failed to convert path ${key}:`, error)
                     }
                 }
             }
@@ -263,6 +270,12 @@ export class AttentionMonitor extends EventEmitter<MonitorEvents>{
      */
     public start(videoElement: TexImageSource): void {
         if (this.isRunning) return
+
+        if (!videoElement) {
+            const error = new Error("No video element provided!")
+            this.emit("error", error)
+            return
+        }
 
         this.videoElement = videoElement
         this.isRunning = true

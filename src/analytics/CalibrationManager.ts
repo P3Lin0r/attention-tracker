@@ -138,8 +138,8 @@ export class CalibrationManager {
         this.baseArea = this.recentAreas.median()
         this.baseGazeYaw = this.recentGazeYaws.median()
         this.baseGazePitch = this.recentGazePitches.median()
-        this.baseHeadYaw = this.recentGazeYaws.median() 
-        this.baseHeadPitch = this.recentGazePitches.median() 
+        this.baseHeadYaw = this.recentHeadYaws.median() 
+        this.baseHeadPitch = this.recentHeadPitches.median() 
         this.baseCx = this.recentCx.median()
         this.baseCy = this.recentCy.median()
 

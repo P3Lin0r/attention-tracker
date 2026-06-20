@@ -95,7 +95,7 @@ export class AttentionEngine {
             const [gx, gy, gz] = snapshot.gaze
             const gazeYaw = rad2degScalar(Math.atan2(gx, Math.abs(gz) + 1e-6))
             const gazePitch = rad2degScalar(Math.asin(clamp(-gy, -1, 1)))
-            const [headYaw, headPitch, _roll] = snapshot.headAngles
+            const [headYaw, headPitch, _roll] = snapshot.headAngles || [0, 0, 0]
 
             const gazeYawDiff = gazeYaw - calibrationState.gazeYaw
             const gazePitchDiff = gazePitch - calibrationState.gazePitch

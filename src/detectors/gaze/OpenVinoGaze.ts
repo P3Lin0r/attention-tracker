@@ -51,14 +51,13 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
     async load(): Promise<void> {
         try {
             this.session = await ort.InferenceSession.create(this.modelPath, {graphOptimizationLevel: "disabled"})
-            console.log("✅ ONNX openVINO Gaze Model loaded")
         } catch (error) {
             console.error("Failed to load ONNX model:", error);
             throw error;
         }
     }
 
-    async predict(landmarks: NormalizedLandmark[], frame?: TexImageSource | null, head_angles?: Vector3D): Promise<Vector3D | null> {
+    async predict(landmarks: NormalizedLandmark[], frame?: TexImageSource | null, headAngles?: Vector3D): Promise<Vector3D | null> {
         if (!frame || !landmarks || landmarks.length === 0 || !this.session) {
             return null;
         }
@@ -69,11 +68,11 @@ export class OpenVINOGazeDetector extends BaseGazeDetector {
         const leftEyeTensor = this.getSquareEyeCropAndPreprocess(frame, frameW, frameH, landmarks, "left");
         const rightEyeTensor = this.getSquareEyeCropAndPreprocess(frame, frameW, frameH, landmarks, "right");
 
-        if (!leftEyeTensor || !rightEyeTensor) return null;
+        if (!leftEyeTensor || !rightEyeTensor || !headAngles) return null;
         
-        this.headPoseBuffer[0] = head_angles[0] // Yaw 
-        this.headPoseBuffer[1] = head_angles[1] // Pitch
-        this.headPoseBuffer[2] = head_angles[2] // Roll
+        this.headPoseBuffer[0] = headAngles[0] // Yaw 
+        this.headPoseBuffer[1] = headAngles[1] // Pitch
+        this.headPoseBuffer[2] = headAngles[2] // Roll
 
         const headPoseTensor = new ort.Tensor(
             "float32",

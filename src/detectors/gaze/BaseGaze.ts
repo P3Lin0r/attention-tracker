@@ -29,13 +29,13 @@ export abstract class BaseGazeDetector {
      * @abstract
      * @param {NormalizedLandmark[]} landmarks Array of normalized facial landmarks.
      * @param {?(TexImageSource | null)} [frame] The raw video/image frame (required for OpenVINO, ignored by Math).
-     * @param {?Vector3D} [head_angles] Euler angles of the head (required for OpenVINO).
+     * @param {?Vector3D} [headAngles] Euler angles of the head (required for OpenVINO).
      * @returns {Promise<Vector3D | null>} A normalized 3D directional vector [x, y, z], or null if detection fails.
      */
     abstract predict(
         landmarks: NormalizedLandmark[],
         frame?: TexImageSource | null,
-        head_angles?: Vector3D
+        headAngles?: Vector3D
     ): Promise<Vector3D | null>
 
     /**

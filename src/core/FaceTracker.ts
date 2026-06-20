@@ -287,8 +287,8 @@ export class FaceTracker{
         return {
             isFaceLost: this.isFaceLost,
             landmarks: this.latestResult?.faceLandmarks[0] || null,
-            gaze: this.currentGaze,
-            headAngles: this.currentHeadAngles
+            gaze: [this.currentGaze[0], this.currentGaze[1], this.currentGaze[2]],
+            headAngles: this.currentHeadAngles ?? undefined
         }
     }
 
