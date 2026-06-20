@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Attention Tracker Demo</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <h1>AttentionTracker Demo</h1>
+    <button type="button" class="btn" id="toggle-view">Hide Visuals</button>
+
+    <div class="container">
+      <div id="video-container" class="video-container">
+        <video id="webcam" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+      </div>
+      <div id="stats" class="stats-box">Loading...</div>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

@@ -36,8 +36,11 @@ export class RealtimeGraph {
         ctx.lineWidth = 1
         ctx.strokeRect(x, y, width, height)
 
+        const fontSize = Math.max(10, Math.floor(height / 4.5))
+        
         ctx.fillStyle = this.color
-        ctx.font = "12px monospace"
+        ctx.font = `${fontSize}px monospace`
+        
         const currentVal = this.history.length ? this.history[this.history.length - 1].toFixed(3) : "0.000"
         let headerText = `${this.label}: ${currentVal}`
 
@@ -45,7 +48,8 @@ export class RealtimeGraph {
             const currentThresh = this.thresholdHistory[this.thresholdHistory.length - 1].toFixed(2)
             headerText += ` (th: ${currentThresh})`
         }
-        ctx.fillText(`${this.label}: ${currentVal}`, x + 5, y + 15)
+        
+        ctx.fillText(headerText, x + 5, y + fontSize + 2)
 
         if (this.history.length < 2) return
 
