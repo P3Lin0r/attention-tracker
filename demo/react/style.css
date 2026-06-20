@@ -1,0 +1,49 @@
+body {
+  background-color: #111;
+  color: white;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+.demo-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.demo-video {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4/3;
+  border-radius: 12px;
+  background-color: #000;
+  object-fit: cover;
+  display: block;
+}
+
+.demo-logger {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: rgba(0, 0, 0, 0.75);
+  color: lime;
+  padding: 12px;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 14px;
+  backdrop-filter: blur(4px);
+  z-index: 10;
+}
+
+.error-msg {
+  color: #ff3366;
+  text-align: center;
+  margin-top: 20px;
+}
