@@ -2,6 +2,8 @@ import type {
     MonitorConfig
 } from "@/types"
 
+const GITHUB_CDN = `https://cdn.jsdelivr.net/gh/P3Lin0r/attention-tracker@${__VERSION__}/public/models`
+
 /**
  * The default configuration fallback for the AttentionMonitor.
  * Values can be partially overridden when initializing the library.
@@ -13,9 +15,9 @@ export const DEFAULT_CONFIG: MonitorConfig = {
             onnx: `https://cdn.jsdelivr.net/npm/onnxruntime-web@${__ONNX_VERSION__}/dist/`
         },
         models: {
-            face: "/models/face_landmarker.task",
-            emotion: "/models/emotion_model.onnx",
-            gazeOV: "/models/gaze-estimation-adas-0002.onnx"
+            face: `${GITHUB_CDN}/face_landmarker.task`,
+            emotion: `${GITHUB_CDN}/emotion_model.onnx`,
+            gazeOV: `${GITHUB_CDN}/gaze-estimation-adas-0002.onnx`
         }
     },
     worker: true,
