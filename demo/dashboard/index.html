@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Group Attention Dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1>Group Attention Dashboard</h1>
+      <div class="global-stats">
+        <div class="stat-box">
+          <span>Overall Focus Score:</span>
+          <strong id="global-score">0.00</strong>
+        </div>
+        <div class="stat-box">
+          <span>Group Status:</span>
+          <strong id="global-status">WAITING</strong>
+        </div>
+      </div>
+      <button id="toggle-visuals" class="toggle-btn">Hide Visuals</button>
+    </header>
+
+    <main id="video-grid" class="video-grid"></main>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
