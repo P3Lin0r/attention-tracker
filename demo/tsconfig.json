@@ -1,0 +1,31 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "outDir": "../dist-demo",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+        
+    "paths": {
+      "attention-tracker": ["../src/index.ts"],
+      "@/*": ["../src/*"],
+      "@utils/*": ["../src/utils/*"],
+      "@config/*": ["../src/config/*"],
+      "@detectors/*": ["../src/detectors/*"],
+      "@analytics/*": ["../src/analytics/*"],
+      "@core/*": ["../src/core/*"],
+      "@workers/*": ["../src/workers/*"],
+      "@hooks/*": ["../src/hooks/*"],
+      "@api/*": ["../src/api/*"]
+    }
+  },
+  "include": [
+    "react/**/*",
+    "vanilla-ts/**/*",
+    "dashboard/**/*"
+, "dashboard/visualizers"  ],
+  "exclude": [
+    "../node_modules",
+    "../dist"
+  ]
+}
