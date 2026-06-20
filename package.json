@@ -1,38 +1,79 @@
 {
-  "name": "attention-tracking",
+  "name": "attention-tracker",
   "version": "0.1.0",
   "type": "module",
-  "description": "",
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "main": "./dist/attention-tracking.umd.cjs",
-  "module": "./dist/attention-tracking.js",
+  "description": "A lightweight, real-time attention tracking and engagement analytics library for detecting focus, distraction, drowsiness, gaze behavior, and psycho-emotional states from webcam video.",
+  "keywords": [
+    "attention",
+    "attention-tracking",
+    "tracker",
+    "gaze-estimation",
+    "eye-tracking",
+    "emotion-recognition",
+    "drowsiness-detection",
+    "webcam",
+    "face-landmarks",
+    "mediapipe",
+    "onnx",
+    "computer-vision",
+    "machine-learning",
+    "neural network",
+    "react",
+    "typescript",
+    "video-conferencing",
+    "e-learning",
+    "driver-monitoring",
+    "fatigue-detection",
+    "adas"
+  ],
+  "author": {
+    "name": "Yermachenkov Illia",
+    "email": "ermakilyxa2@gmail.com",
+    "url": "https://github.com/P3Lin0r"
+  },
+  "license": "MIT",
+  "main": "./dist/attention-tracker.umd.cjs",
+  "module": "./dist/attention-tracker.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/attention-tracking.js",
-      "require": "./dist/attention-tracking.umd.cjs",
+      "import": "./dist/attention-tracker.js",
+      "require": "./dist/attention-tracker.umd.cjs",
       "types": "./dist/index.d.ts"
     }
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build -c vite.config.lib.ts && tsc --emitDeclarationOnly",
+    "dev": "npm run dev:vanilla",
+    "dev:vanilla": "vite demo/vanilla-ts --config vite.config.ts",
+    "dev:dashboard": "vite demo/dashboard --config vite.config.ts",
+    "dev:react": "vite demo/react --config vite.config.ts",
+    "build": "vite build -c vite.config.lib.ts",
+    "prepack": "npm run build",
     "test": "vitest",
     "start": "node index.ts"
   },
   "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vite": "^8.0.10",
+    "vite-plugin-dts": "^5.0.1",
     "vitest": "^4.1.5"
   },
+  "peerDependencies": {
+    "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
+  },
   "dependencies": {
-    "@mediapipe/camera_utils": "^0.3.1675466862",
-    "@mediapipe/drawing_utils": "^0.3.1675466124",
-    "@mediapipe/tasks-vision": "^0.10.22-rc.20250304",
-    "@tensorflow/tfjs": "^4.22.0",
-    "onnxruntime-web": "^1.24.3"
+    "@mediapipe/tasks-vision": "^0.10.35",
+    "onnxruntime-web": "^1.26.0"
   }
 }

@@ -1,3 +1,9 @@
+# Demo sandbox videos
+public/videos/*.mp4
+public/videos/*.webm
+public/videos/*.mov
+public/videos/*.avi
+
 # Logs
 logs
 *.log
@@ -124,6 +130,7 @@ dist
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+.vscode
 
 # pnpm
 .pnpm-store
