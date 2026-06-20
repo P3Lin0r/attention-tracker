@@ -27,6 +27,13 @@ const cSig = (val: number, thresh: number) => {
 }
 const cPerc = (val: number) => `<span style="color: ${val > 0.15 ? '#ff3366' : '#00ffcc'}">${(val * 100).toFixed(1)}%</span>`
 
+const statusColors: Record<string, string> = {
+    DISTRACTED: '#ffaa00',
+    FATIGUED: '#ffaa00',
+    MICROSLEEP: '#ff3366',
+    DROWSY: '#ff3366',
+}
+
 async function setupCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -90,10 +97,12 @@ async function main() {
         const gPitch = rad2degScalar(Math.asin(clamp(-gaze[1], -1, 1))).toFixed(2)
         const headang = direct.headAngles || [0, 0, 0]
 
+        const titleColor = statusColors[result.status] || '#00ffcc'
+
         stats.innerHTML = `
             <div style="font-family: monospace; background: #1a1a1a; padding: 20px; border-radius: 12px; border: 1px solid #333;">
                 <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px;">
-                    <h2 style="margin: 0; color: ${result.score > 0.7 ? '#00ffcc' : result.score > 0.4 ? '#ffaa00' : '#ff3366'};">
+                    <h2 style="margin: 0; color: ${titleColor}">
                         Status: ${result.status}
                     </h2>
                     <h2 style="margin: 0; color: white;">Score: ${result.score.toFixed(3)}</h2>

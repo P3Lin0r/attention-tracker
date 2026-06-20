@@ -97,15 +97,17 @@ async function createParticipantCard(videoSrc: string, index: number) {
         penal: card.querySelector(".local-penalties") as HTMLElement,
     }
 
-    await new Promise((resolve) => {
-        video.onloadeddata = resolve
-    })
-
+    
     const overlayCtx = overlayCanvas.getContext("2d")!
     const graphsCtx = graphsCanvas.getContext("2d")!
     const visualizer = new Visualizer()
-
+    
     try {
+        await new Promise<void>((resolve, reject) => {
+            video.onloadeddata = () => resolve()
+            video.onerror = () => reject(new Error(`Video file not found: ${videoSrc}`))
+        })
+
         const monitor = await AttentionMonitor.create({
             worker: true, 
             backend: "GPU",
@@ -171,13 +173,29 @@ async function createParticipantCard(videoSrc: string, index: number) {
 
             GroupAnalytics.updateGlobalStats(latestResults, globalScoreElement, globalStatusElement)
         })
+        
+        monitor.on("error", (error: Error)=>{
+            console.error(error)
+        })
 
         monitor.start(video)
 
-    } catch (error) {
-        console.error(`Failed to init tracker for participant ${index + 1}:`, error)
+    } catch (error: any) {
         els.status.innerText = "ERROR"
         els.status.style.color = "red"
+        console.warn(`[Dashboard] Participant #${index + 1} initialization failed:`, error.message)
+        
+        els.status.innerText = error.message.includes("Video file not found") ? "MISSING VIDEO" : "ERROR"
+        els.status.style.color = "#ff3366"
+        card.style.borderColor = "#ff3366"
+        
+        overlayCanvas.width = 300;
+        overlayCanvas.height = 150;
+        overlayCtx.fillStyle = "#ff3366";
+        overlayCtx.font = "14px Arial";
+        overlayCtx.textAlign = "center";
+        overlayCtx.fillText("Video missing.", 150, 70);
+        overlayCtx.fillText("Add files to /videos folder.", 150, 90);
     }
 }
 
