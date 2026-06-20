@@ -147,9 +147,10 @@ export function useAttentionMonitor(
 
                 monitor.on("attention", (res) => {
                     if (onUpdateRef.current) onUpdateRef.current(res)
-
+                    
                     const now = performance.now()
-                    if (now - lastStateUpdateRef.current >= throttleStateMs) {
+                    const isCriticalStatus = res.status == "MICROSLEEP" || res.status == "DROWSY" || res.status == "NOT_DETECTED"
+                    if (isCriticalStatus || now - lastStateUpdateRef.current >= throttleStateMs) {
                         setResult(res)
                         lastStateUpdateRef.current = now
                     }
