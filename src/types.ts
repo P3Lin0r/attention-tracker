@@ -292,24 +292,45 @@ export interface EngineConfig {
 
     /** Configuration for detecting hyperactive/fidgeting behavior (ADHD state). */
     adhdDynamics: {
-        /** Weights determining how much head vs. gaze variance contributes to the ADHD score. */
+        /**
+         * Enables or disables hyperactive/fidgeting behavior detection.
+         * Set to `false` to skip these calculations entirely.
+         * @default true 
+         */
+        enabled: boolean
+
+        /** 
+         * Weights determining how much head vs. gaze variance contributes to the ADHD score.
+         * The sum of these weights should ideally be 1.0.
+         */
         adhdWeights: {
-            /** @default 0.4 */
-            head: number
             /** @default 0.6 */
+            head: number
+            /** @default 0.4 */
             gaze: number
         }
-        /** 
-         * Multiplier applied to the baseline standard deviation to trigger an ADHD status. 
-         * @default 3.5
+
+        /**
+         * Multiplier applied to the user's personal baseline standard deviation.
+         * Determines how much MORE the user needs to move compared to their calibration state to trigger ADHD.
+         * 
+         * - `INCREASE` this value (e.g., 5.0) to make the detector `LESS sensitive` (triggers less often).
+         * - `DECREASE` this value (e.g., 2.5) to make the detector `MORE sensitive` (triggers more easily).
+         * @default 4.5
          */
         adhdStdMultiplier: number
-        /** 
-         * The absolute minimum standard deviation required to trigger an ADHD status, preventing false positives for extremely still users. 
-         * @default 5 
+        
+        /** The absolute minimum standard deviation (movement variance) required to trigger an ADHD status.
+         * This acts as a safety floor to prevent false positives for users who were sitting completely still 
+         * during auto-calibration (which creates an impossibly strict baseline).
+         * 
+         * - `INCREASE` this value (e.g., 9.0) if the system constantly triggers ADHD for users who barely move.
+         * - `DECREASE` this value (e.g., 2.0) if you want to capture tiny micro-movements as hyperactivity.
+         * @default 8.5
          */
         minStdThreshold: number
     }
+
     /** Configurable score boundaries that trigger status changes. */
     thresholds: {
         /** 
@@ -319,6 +340,7 @@ export interface EngineConfig {
          */
         normalScoreCutoff: number
     }
+
     /** Dynamic multipliers and fixed penalty values based on specific detected behaviors or emotions. */
     modifiers: {
         /** 
@@ -349,6 +371,9 @@ export interface EngineConfig {
      * These weights only dictate gradual score drops. Critical status changes 
      * (e.g., `MICROSLEEP` or high `DROWSY` levels) act as **hard overrides**, 
      * bypassing these weights to immediately plummet the score to ensure safety.
+     * 
+     * For correct operations, the sum of all weights (gaze + perclos + yawn) 
+     * should ideally equal 1.0.
      */
     weights: {
         /** @default 0.5 */

@@ -59,12 +59,13 @@ export const DEFAULT_CONFIG: MonitorConfig = {
                 pitchScale: 20,
             },
             adhdDynamics: {
+                enabled: true,
                 adhdWeights: {
-                    head: 0.4,
-                    gaze: 0.6
+                    head: 0.6,
+                    gaze: 0.4
                 },
-                adhdStdMultiplier: 3.5,
-                minStdThreshold: 5,
+                adhdStdMultiplier: 4.5,
+                minStdThreshold: 8.5,
             },
             thresholds: {
                 normalScoreCutoff: 0.70

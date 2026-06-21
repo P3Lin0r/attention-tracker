@@ -119,7 +119,7 @@ export class AttentionEngine {
             details.penalties.gaze = Math.min(1, yawPenalty + pitchPenalty)
 
             // Detect high variance (jittery gaze and head without losing focus entirely)
-            if (this.gazeYawDiffHistory.isFull && this.headYawDiffHistory.isFull){
+            if (this.config.adhdDynamics.enabled && this.gazeYawDiffHistory.isFull && this.headYawDiffHistory.isFull){
                 const gazeStd = this.gazeYawDiffHistory.std() + this.gazePitchDiffHistory.std()
                 const headStd = this.headYawDiffHistory.std() + this.headPitchDiffHistory.std()
 
