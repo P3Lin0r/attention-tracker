@@ -22,6 +22,7 @@ export default defineConfig({
     },
     define: {
         global: "globalThis",
+        __VERSION__: JSON.stringify(pkg.version),
         __MEDIAPIPE_VERSION__: JSON.stringify(cleanVersion(pkg.dependencies["@mediapipe/tasks-vision"])),
         __ONNX_VERSION__: JSON.stringify(cleanVersion(pkg.dependencies["onnxruntime-web"]))
     },
