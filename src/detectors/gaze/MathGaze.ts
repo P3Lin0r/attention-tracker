@@ -33,7 +33,7 @@ export class MathGazeDetector extends BaseGazeDetector {
     async load(): Promise<void> { }
 
     async predict(landmarks: NormalizedLandmark[]): Promise<Vector3D | null> {
-        if (!landmarks.length) return null
+        if (!landmarks || landmarks.length < 478) return null
         
         const [yawRad, pitchRad] = this.computeYawPitchFromLandmarks(landmarks)
         
