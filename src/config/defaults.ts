@@ -28,15 +28,18 @@ export const DEFAULT_CONFIG: MonitorConfig = {
             thresholdSensitivity: 0.6,
             blinkDurationLimit: 0.4,
             microsleepLimit: 2,
-            perclosDrowsyThreshold: 0.20, 
+            perclosDrowsyThreshold: 0.20,
             earTimeWindow: 5,
-            perclosTimeWindow: 60
+            perclosTimeWindow: 60,
+            minThresholdCalibrationTimeMs: 1000,
+            minPerclosGatheringTimeMs: 5000,
         },
         yawn: {
             thresholdSensitivity: 2.2,
             minYawnDuration: 1.4, 
             maxYawnDuration: 6,
-            marTimeWindow: 10
+            marTimeWindow: 10,
+            minThresholdCalibrationTimeMs: 1500
         },
         emotion: {
             historyLimit: 5

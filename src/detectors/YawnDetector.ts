@@ -10,9 +10,6 @@ import {clamp} from "@utils/helpers"
  * @class YawnDetector
  */
 export class YawnDetector {
-    /** @private Minimum time required to establish a baseline threshold. */
-    private static readonly MIN_CALIBRATION_TIME_MS = 1500
-
     private marHistory: HistoryBuffer
 
     threshold = 0.8
@@ -41,8 +38,15 @@ export class YawnDetector {
      */
     update(currentMAR: number): void {
         const now = performance.now() / 1000
+
+        this.marHistory.push(currentMAR)
         
-        this.updateThreshold(currentMAR)
+        if (this.marHistory.timeSpanMs < this.config.minThresholdCalibrationTimeMs){
+            this.status = "NORMAL"
+            return
+        }
+
+        this.updateThreshold()
 
         const mouthOpened = currentMAR > this.threshold
         if (mouthOpened){
@@ -77,34 +81,29 @@ export class YawnDetector {
      * distances from the camera or individual facial features.
      *
      * @private
-     * @param {number} mar The current MAR value.
      */
-    private updateThreshold(mar: number): void {
-        this.marHistory.push(mar)
+    private updateThreshold(): void {
+        const medMar = this.marHistory.median()
 
-        if (this.marHistory.timeSpanMs > YawnDetector.MIN_CALIBRATION_TIME_MS){
-            const medMar = this.marHistory.median()
-
-            const marhist = this.marHistory.getMutableSnapshot()
-            const histlen = marhist.length
-            let count = 0
-            let sum = 0
-            for (let i = 0; i < histlen; i++){
-                const mar = marhist[i]
-                if (mar < medMar){
-                    count++
-                    sum += mar
-                }
+        const marhist = this.marHistory.getMutableSnapshot()
+        const histlen = marhist.length
+        let count = 0
+        let sum = 0
+        for (let i = 0; i < histlen; i++){
+            const mar = marhist[i]
+            if (mar < medMar){
+                count++
+                sum += mar
             }
-            
-            if (count === 0) return
-            
-            this.threshold = clamp(
-                (sum/count) * this.config.thresholdSensitivity,
-                0.3,
-                1.5
-            )
         }
+        
+        if (count === 0) return
+        
+        this.threshold = clamp(
+            (sum/count) * this.config.thresholdSensitivity,
+            0.3,
+            1.5
+        )
     }
 
     /** Resets the detector, clearing histories and resetting internal timers. */

@@ -150,6 +150,20 @@ export interface BlinkConfig {
      * @default 60
      */
     perclosTimeWindow: number
+    /** 
+     * Minimum time (in milliseconds) for EAR data accumulation before detection begins. 
+     * Prevents false detects of the blinks during the first few seconds after startup.
+     * @default 1000
+     */
+    minThresholdCalibrationTimeMs: number
+    /** 
+     * Minimum time (in milliseconds) of collected eye-closure history 
+     * before the system begins calculating PERCLOS.
+     * 
+     * A minimum of 5–10 seconds is recommended to prevent a random blink at the start from resulting in a height drowsiness score.
+     * @default 5000
+     */
+    minPerclosGatheringTimeMs: number
 }
 
 /**
@@ -180,6 +194,12 @@ export interface YawnConfig {
      * @default 10 
      */
     marTimeWindow: number
+    /** 
+     * Minimum time (in milliseconds) for MAR data accumulation before detection begins. 
+     * Prevents false detects of the yawns during the first few seconds after startup.
+     * @default 1500
+     */
+    minThresholdCalibrationTimeMs: number
 }
 
 /**

@@ -9,9 +9,6 @@ import type { BlinkStatus, BlinkConfig } from "@/types"
  * @class BlinkDetector
  */
 export class BlinkDetector {
-    /** @private Minimum time required to establish a baseline threshold. */
-    private static readonly MIN_CALIBRATION_TIME_MS = 1000
-
     private earHistory: HistoryBuffer
     private closureHistory: HistoryBuffer
 
@@ -44,7 +41,14 @@ export class BlinkDetector {
     update(currentEAR: number): void {
         const now = performance.now() / 1000
 
-        this.updateThreshold(currentEAR)
+        this.earHistory.push(currentEAR)
+        
+        if (this.earHistory.timeSpanMs < this.config.minThresholdCalibrationTimeMs){
+            this.status = "NORMAL"
+            return
+        }
+
+        this.updateThreshold()
 
         const currentlyClosed  = currentEAR < this.threshold
         
@@ -76,10 +80,13 @@ export class BlinkDetector {
         }
 
         if (this.status !== "MICROSLEEP"){
-            this.status = 
-                this.perclosScore > this.config.perclosDrowsyThreshold
-                ? "DROWSY"
-                : "NORMAL"
+            if (this.closureHistory.timeSpanMs < this.config.minPerclosGatheringTimeMs) {
+                this.status = "NORMAL"
+            } else {
+                this.status = this.perclosScore > this.config.perclosDrowsyThreshold
+                    ? "DROWSY"
+                    : "NORMAL"
+            }
         }
     }
     
@@ -88,13 +95,8 @@ export class BlinkDetector {
      * Uses the median of recent EAR readings.
      *
      * @private
-     * @param {number} ear The current EAR value.
      */
-    private updateThreshold(ear: number): void{
-        this.earHistory.push(ear)
-        
-        if (this.earHistory.timeSpanMs < BlinkDetector.MIN_CALIBRATION_TIME_MS) return
-        
+    private updateThreshold(): void{                
         const medEar = this.earHistory.median()
         
         const earhist = this.earHistory.getMutableSnapshot()
