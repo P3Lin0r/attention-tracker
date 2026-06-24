@@ -6,7 +6,7 @@
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-00BFFF?style=for-the-badge&logo=mediapipe&logoColor=white)](https://developers.google.com/mediapipe)
 [![ONNX Runtime](https://img.shields.io/badge/ONNX_Runtime-005C84?style=for-the-badge&logo=onnx&logoColor=white)](https://onnxruntime.ai/)
 
-<video src="https://github.com/user-attachments/assets/6a85b538-3b5a-40e0-b98c-349a6ad7b2b2" alt="Attention Tracker Demo" autoplay loop muted playsinline controls width="100%"></video>
+<video src="https://github.com/P3Lin0r/media-assets/raw/refs/heads/main/attention-tracker/videos/default_demo.mp4" alt="Attention Tracker Demo" autoplay loop muted playsinline controls width="100%"></video>
 _Note: Video playback may appear choppy due to screen recording limitations; the actual library runs smoothly in real-time._
 
 **Attention Tracker** is a lightweight, real-time engagement analytics library for detecting focus, distraction, drowsiness, gaze behavior, and emotional states directly in the browser.
@@ -210,7 +210,7 @@ To prevent this, use **`throttleStateMs`** to slow down state updates to a comfo
 
 ## **Running the Demos Locally**
 
-<video src="https://github.com/user-attachments/assets/9a8b6e17-a16e-4659-805c-c5dffd2950f0" alt="Group Dashboard Demo" autoplay loop muted playsinline controls width="100%"></video>
+<video src="https://github.com/P3Lin0r/media-assets/raw/refs/heads/main/attention-tracker/videos/conference_demo.mp4" alt="Group Dashboard Demo" autoplay loop muted playsinline controls width="100%"></video>
 
 Want to see it in action or test it locally? This repository includes ready-to-use demos for both Vanilla TS and React.
 
@@ -264,7 +264,7 @@ Thanks to its highly flexible configuration, you can adapt the engine to track a
 
 ### Driver Monitoring System (Safety Profile)
 
-<video src="https://github.com/user-attachments/assets/42ff22b3-d1ff-4339-b6eb-7d85140ba961" alt="Demo of driver monitoring" autoplay loop muted playsinline controls width="100%"></video>
+<video src="https://github.com/P3Lin0r/media-assets/raw/refs/heads/main/attention-tracker/videos/driver_demo.mp4" alt="Demo of driver monitoring" autoplay loop muted playsinline controls width="100%"></video>
 
 _**[ Notice how quickly the system adapts to the situation after startup, while keeping the status stable without erratic changes. ]**_
 
