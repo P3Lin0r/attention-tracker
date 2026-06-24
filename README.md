@@ -6,8 +6,9 @@
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-00BFFF?style=for-the-badge&logo=mediapipe&logoColor=white)](https://developers.google.com/mediapipe)
 [![ONNX Runtime](https://img.shields.io/badge/ONNX_Runtime-005C84?style=for-the-badge&logo=onnx&logoColor=white)](https://onnxruntime.ai/)
 
-<video src="https://github.com/P3Lin0r/media-assets/raw/refs/heads/main/attention-tracker/videos/default_demo.mp4" alt="Attention Tracker Demo" autoplay loop muted playsinline controls width="100%"></video>
-_Note: Video playback may appear choppy due to screen recording limitations; the actual library runs smoothly in real-time._
+<img alt="Attention Tracker Demo" src="https://github.com/P3Lin0r/media-assets/raw/refs/heads/main/attention-tracker/videos/default_demo.gif" />
+
+_[ Note: GIF playback may appear choppy due to compression and screen recording limitations; the actual library runs smoothly in real-time. [Watch full high-quality MP4 versions on Google Drive](https://drive.google.com/drive/folders/1_zvS6miXcpxELTOPM7FpQBrXFNIgBTU8?usp=sharing) ]_
 
 **Attention Tracker** is a lightweight, real-time engagement analytics library for detecting focus, distraction, drowsiness, gaze behavior, and emotional states directly in the browser.
 
@@ -210,7 +211,7 @@ To prevent this, use **`throttleStateMs`** to slow down state updates to a comfo
 
 ## **Running the Demos Locally**
 
-<video src="https://github.com/P3Lin0r/media-assets/raw/refs/heads/main/attention-tracker/videos/conference_demo.mp4" alt="Group Dashboard Demo" autoplay loop muted playsinline controls width="100%"></video>
+<img alt="Group Dashboard Demo" src="https://github.com/P3Lin0r/media-assets/raw/refs/heads/main/attention-tracker/videos/conference_demo.gif" />
 
 Want to see it in action or test it locally? This repository includes ready-to-use demos for both Vanilla TS and React.
 
@@ -264,9 +265,9 @@ Thanks to its highly flexible configuration, you can adapt the engine to track a
 
 ### Driver Monitoring System (Safety Profile)
 
-<video src="https://github.com/P3Lin0r/media-assets/raw/refs/heads/main/attention-tracker/videos/driver_demo.mp4" alt="Demo of driver monitoring" autoplay loop muted playsinline controls width="100%"></video>
+<img alt="Demo of driver monitoring" src="https://github.com/P3Lin0r/media-assets/raw/refs/heads/main/attention-tracker/videos/driver_demo.gif" />
 
-_**[ Notice how quickly the system adapts to the situation after startup, while keeping the status stable without erratic changes. ]**_
+_**[ Notice how quickly the system adapts to the situation after startup, while keeping the status stable without erratic changes. ]**_ _[Watch full high-quality MP4 on Google Drive](https://drive.google.com/file/d/1WVnYzKvrypxGM85wi5CRjq2D6LFNrsvh/view?usp=sharing)_
 
 The default configuration is tuned for **office/e-learning** scenarios. However, the `AttentionEngine` is fully customizable. Here is how you can reconfigure it for **Driver Monitoring**, where microsleeps are fatal and users constantly check mirrors.
 
